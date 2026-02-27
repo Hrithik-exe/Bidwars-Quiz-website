@@ -458,7 +458,6 @@ export class PlayerManager {
       return {};
     }
   }
-}
 
   /**
    * Remove a player from the game
@@ -514,3 +513,4 @@ export class PlayerManager {
       };
     }
   }
+}
