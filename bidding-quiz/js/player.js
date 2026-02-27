@@ -9,6 +9,8 @@
  * - PlayerManager: Class for managing all players in a game room
  */
 
+// Version: 1.0.1 - Fixed removePlayer method placement
+
 import { db } from './firebase-config.js';
 import { ref, set, update, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { PresenceTracker } from './presence-tracker.js';
