@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Timer Demo - Multiplayer Bidding Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            padding: 20px;
+        }
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .demo-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 2px solid #000;
+        }
+        .demo-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .demo-controls button {
+            padding: 10px 20px;
+            background: #000;
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .demo-controls button:hover {
+            background: #333;
+        }
+        .timer-info {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-container">
+        <h1>Timer System Demo</h1>
+        
+        <div class="demo-section">
+            <h2>Phase Timer with Different Durations</h2>
+            <div id="phase-indicator-container"></div>
+            
+            <div class="demo-controls">
+                <button onclick="startTimer(5, 'spinning')">Spinning (5s)</button>
+                <button onclick="startTimer(30, 'bidding')">Bidding (30s)</button>
+                <button onclick="startTimer(20, 'question')">Question (20s)</button>
+                <button onclick="startTimer(10, 'results')">Results (10s)</button>
+                <button onclick="stopTimer()">Stop Timer</button>
+            </div>
+            
+            <div class="timer-info" id="timer-info">
+                Timer not started
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Timer States</h2>
+            <p>The timer display changes based on remaining time:</p>
+            <ul>
+                <li><strong>Normal:</strong> White text (> 10 seconds)</li>
+                <li><strong>Warning:</strong> Red text (< 10 seconds)</li>
+                <li><strong>Critical:</strong> Red text with pulsing animation (< 5 seconds)</li>
+            </ul>
+        </div>
+        
+        <div class="demo-section">
+            <h2>Late Joiner Simulation</h2>
+            <p>Simulates a player joining mid-phase with remaining time calculated from server timestamp.</p>
+            
+            <div class="demo-controls">
+                <button onclick="simulateLateJoiner(15)">Join with 15s remaining</button>
+                <button onclick="simulateLateJoiner(8)">Join with 8s remaining</button>
+                <button onclick="simulateLateJoiner(3)">Join with 3s remaining</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { PhaseTimer, PHASE_DURATIONS } from './js/timer.js';
+        import { UIManager } from './js/ui.js';
+
+        let currentTimer = null;
+        let uiManager = null;
+        
+        // Initialize UI Manager
+        window.addEventListener('DOMContentLoaded', () => {
+            uiManager = new UIManager('demo-room');
+        });
+
+        window.startTimer = function(durationSeconds, phase) {
+            // Stop existing timer
+            if (currentTimer) {
+                currentTimer.stop();
+            }
+
+            // Create new timer
+            currentTimer = new PhaseTimer(durationSeconds);
+            
+            // Set up callbacks
+            currentTimer.onTick((secondsRemaining) => {
+                updateTimerInfo(secondsRemaining, durationSeconds);
+                updatePhaseIndicator(phase, secondsRemaining);
+            });
+            
+            currentTimer.onExpire(() => {
+                updateTimerInfo(0, durationSeconds);
+                document.getElementById('timer-info').innerHTML += '<br><strong>⏰ TIMER EXPIRED!</strong>';
+            });
+
+            // Start timer with current time as start time
+            const startTime = Date.now();
+            currentTimer.start(startTime);
+            
+            // Initial display
+            updatePhaseIndicator(phase, durationSeconds);
+            updateTimerInfo(durationSeconds, durationSeconds);
+        };
+
+        window.stopTimer = function() {
+            if (currentTimer) {
+                currentTimer.stop();
+                currentTimer = null;
+                document.getElementById('timer-info').textContent = 'Timer stopped';
+            }
+        };
+
+        window.simulateLateJoiner = function(secondsRemaining) {
+            const duration = 30; // Assume 30 second phase
+            const elapsed = (duration - secondsRemaining) * 1000;
+            const serverStartTime = Date.now() - elapsed;
+            
+            // Stop existing timer
+            if (currentTimer) {
+                currentTimer.stop();
+            }
+
+            // Create new timer
+            currentTimer = new PhaseTimer(duration);
+            
+            // Set up callbacks
+            currentTimer.onTick((remaining) => {
+                updateTimerInfo(remaining, duration);
+                updatePhaseIndicator('bidding', remaining);
+            });
+            
+            currentTimer.onExpire(() => {
+                updateTimerInfo(0, duration);
+                document.getElementById('timer-info').innerHTML += '<br><strong>⏰ TIMER EXPIRED!</strong>';
+            });
+
+            // Start timer with calculated start time
+            currentTimer.start(serverStartTime);
+            
+            // Initial display
+            updatePhaseIndicator('bidding', secondsRemaining);
+            updateTimerInfo(secondsRemaining, duration);
+        };
+
+        function updateTimerInfo(remaining, total) {
+            const elapsed = total - remaining;
+            const percentage = ((elapsed / total) * 100).toFixed(1);
+            
+            document.getElementById('timer-info').innerHTML = `
+                <strong>Timer Status:</strong><br>
+                Remaining: ${remaining} seconds<br>
+                Elapsed: ${elapsed} seconds<br>
+                Progress: ${percentage}%<br>
+                State: ${remaining < 5 ? 'CRITICAL (pulsing)' : remaining < 10 ? 'WARNING (red)' : 'NORMAL'}
+            `;
+        }
+
+        function updatePhaseIndicator(phase, secondsRemaining) {
+            const container = document.getElementById('phase-indicator-container');
+            if (!container || !uiManager) return;
+            
+            container.innerHTML = uiManager.renderPhaseIndicator(phase, 1, secondsRemaining);
+        }
+    </script>
+</body>
+</html>

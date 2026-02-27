@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Performance Monitoring</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    
+    h1 {
+      color: #333;
+    }
+    
+    #wheel-container {
+      margin: 30px 0;
+      min-height: 400px;
+    }
+    
+    .wheel-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      margin: 0 auto;
+    }
+    
+    .wheel {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 5px solid #333;
+      background: #fff;
+      will-change: transform;
+    }
+    
+    .wheel-segment {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      top: 0;
+      left: 50%;
+      transform-origin: 0% 100%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      clip-path: polygon(0 0, 100% 0, 0 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.3s ease;
+    }
+    
+    .wheel-segment--used {
+      opacity: 0.4;
+      filter: grayscale(60%);
+    }
+    
+    .wheel-segment--available {
+      opacity: 1.0;
+    }
+    
+    .wheel-segment--selected {
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+      transform: scale(1.05);
+      z-index: 10;
+    }
+    
+    .wheel-segment-text {
+      font-size: 12px;
+      color: white;
+      font-weight: bold;
+      transform: rotate(-18deg);
+      text-align: center;
+      padding: 10px;
+    }
+    
+    .wheel-pointer {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 40px;
+      color: #ff0000;
+      z-index: 100;
+    }
+    
+    .wheel-status {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+    
+    .wheel-topic-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      background: rgba(0,0,0,0.7);
+      padding: 10px 20px;
+      border-radius: 8px;
+      display: none;
+      z-index: 200;
+    }
+    
+    .wheel--spinning {
+      pointer-events: none;
+    }
+    
+    .wheel-aria-live {
+      position: absolute;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+    
+    .controls {
+      text-align: center;
+      margin: 30px 0;
+    }
+    
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 0 10px;
+    }
+    
+    button:hover {
+      background: #5568d3;
+    }
+    
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    #console-output {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 30px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #667eea;
+      background: white;
+    }
+    
+    .log-entry.warning {
+      border-left-color: #ff9800;
+      background: #fff3e0;
+    }
+    
+    .log-entry.error {
+      border-left-color: #f44336;
+      background: #ffebee;
+    }
+  </style>
+</head>
+<body>
+  <h1>Performance Monitoring Test</h1>
+  <p>This test verifies that the wheel tracks frame rate and render time correctly.</p>
+  
+  <div id="wheel-container"></div>
+  
+  <div class="controls">
+    <button id="render-btn">Render Wheel</button>
+    <button id="spin-btn" disabled>Spin Wheel</button>
+    <button id="clear-btn">Clear Console</button>
+  </div>
+  
+  <h2>Console Output</h2>
+  <div id="console-output"></div>
+  
+  <script type="module">
+    import { SpinningWheel } from './js/wheel.js';
+    
+    const consoleOutput = document.getElementById('console-output');
+    const renderBtn = document.getElementById('render-btn');
+    const spinBtn = document.getElementById('spin-btn');
+    const clearBtn = document.getElementById('clear-btn');
+    
+    let wheel = null;
+    
+    // Intercept console.log and console.warn
+    const originalLog = console.log;
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    function addLogEntry(message, type = 'log') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      consoleOutput.appendChild(entry);
+      consoleOutput.scrollTop = consoleOutput.scrollHeight;
+    }
+    
+    console.log = function(...args) {
+      originalLog.apply(console, args);
+      addLogEntry(args.join(' '), 'log');
+    };
+    
+    console.warn = function(...args) {
+      originalWarn.apply(console, args);
+      addLogEntry(args.join(' '), 'warning');
+    };
+    
+    console.error = function(...args) {
+      originalError.apply(console, args);
+      addLogEntry(args.join(' '), 'error');
+    };
+    
+    // Render wheel
+    renderBtn.addEventListener('click', () => {
+      console.log('Rendering wheel...');
+      wheel = new SpinningWheel('test-room');
+      
+      const container = document.getElementById('wheel-container');
+      wheel.renderWithUsedTopics(container, []);
+      
+      spinBtn.disabled = false;
+      console.log('Wheel rendered successfully');
+    });
+    
+    // Spin wheel
+    spinBtn.addEventListener('click', async () => {
+      if (!wheel) {
+        console.error('Wheel not initialized');
+        return;
+      }
+      
+      spinBtn.disabled = true;
+      console.log('Starting spin animation...');
+      
+      try {
+        // Mock the selectRandomTopic to avoid Firebase calls
+        wheel.selectRandomTopic = async function() {
+          const topics = ['Science & Technology', 'World History', 'Geography'];
+          const selected = topics[Math.floor(Math.random() * topics.length)];
+          this.selectedTopic = selected;
+          return selected;
+        };
+        
+        const result = await wheel.spinWithEnhancedAnimation();
+        console.log(`Spin completed. Selected topic: ${result}`);
+        
+        // Highlight the selected topic
+        if (result) {
+          wheel.highlightSelectedTopic(result, 2000);
+        }
+      } catch (error) {
+        console.error('Error during spin:', error);
+      } finally {
+        spinBtn.disabled = false;
+      }
+    });
+    
+    // Clear console
+    clearBtn.addEventListener('click', () => {
+      consoleOutput.innerHTML = '';
+      console.log('Console cleared');
+    });
+    
+    console.log('Test page loaded. Click "Render Wheel" to begin.');
+  </script>
+</body>
+</html>

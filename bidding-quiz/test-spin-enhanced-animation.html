@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Spin with Enhanced Animation</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-container {
+            margin-bottom: 40px;
+            border: 2px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-description {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .test-result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .pass {
+            color: green;
+            font-weight: bold;
+        }
+        .fail {
+            color: red;
+            font-weight: bold;
+        }
+        .info {
+            color: blue;
+            font-weight: bold;
+        }
+        .metrics {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e8f4f8;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Spin with Enhanced Animation - Test Page</h1>
+    <p>This page tests the spinWithEnhancedAnimation method implementation.</p>
+
+    <!-- Test 1: Basic spin animation -->
+    <div class="test-container">
+        <div class="test-title">Test 1: Basic Spin Animation</div>
+        <div class="test-description">
+            Click "Spin Wheel" to test the enhanced animation.
+            Verify: cubic-bezier easing, wheel--spinning class applied, spinStartTime tracked, Promise resolves with topic.
+        </div>
+        <div class="controls">
+            <button id="spin-btn-1">Spin Wheel</button>
+        </div>
+        <div id="wheel-container-1"></div>
+        <div class="test-result" id="result-1"></div>
+        <div class="metrics" id="metrics-1"></div>
+    </div>
+
+    <!-- Test 2: Animation timing verification -->
+    <div class="test-container">
+        <div class="test-title">Test 2: Animation Timing (3-7 seconds)</div>
+        <div class="test-description">
+            Click "Spin Wheel" to verify animation duration is between 3-7 seconds.
+        </div>
+        <div class="controls">
+            <button id="spin-btn-2">Spin Wheel</button>
+        </div>
+        <div id="wheel-container-2"></div>
+        <div class="test-result" id="result-2"></div>
+        <div class="metrics" id="metrics-2"></div>
+    </div>
+
+    <!-- Test 3: Spinning class verification -->
+    <div class="test-container">
+        <div class="test-title">Test 3: Spinning Class Applied</div>
+        <div class="test-description">
+            Click "Spin Wheel" to verify wheel--spinning class is applied during animation and removed after.
+        </div>
+        <div class="controls">
+            <button id="spin-btn-3">Spin Wheel</button>
+        </div>
+        <div id="wheel-container-3"></div>
+        <div class="test-result" id="result-3"></div>
+        <div class="metrics" id="metrics-3"></div>
+    </div>
+
+    <!-- Test 4: CSS transform verification -->
+    <div class="test-container">
+        <div class="test-title">Test 4: CSS Transform with Cubic-Bezier</div>
+        <div class="test-description">
+            Click "Spin Wheel" to verify CSS transform is used with cubic-bezier easing function.
+        </div>
+        <div class="controls">
+            <button id="spin-btn-4">Spin Wheel</button>
+        </div>
+        <div id="wheel-container-4"></div>
+        <div class="test-result" id="result-4"></div>
+        <div class="metrics" id="metrics-4"></div>
+    </div>
+
+    <script type="module">
+        import { SpinningWheel, TOPICS } from './js/wheel.js';
+
+        // Mock Firebase for testing
+        window.mockFirebase = true;
+
+        // Helper function to run test
+        async function runTest(testNum, testFn) {
+            const spinBtn = document.getElementById(`spin-btn-${testNum}`);
+            const resultDiv = document.getElementById(`result-${testNum}`);
+            const metricsDiv = document.getElementById(`metrics-${testNum}`);
+            
+            spinBtn.addEventListener('click', async () => {
+                spinBtn.disabled = true;
+                resultDiv.innerHTML = '<div class="info">Running test...</div>';
+                metricsDiv.innerHTML = '';
+                
+                try {
+                    const result = await testFn(testNum);
+                    
+                    const allPassed = result.checks.every(c => c.passed);
+                    resultDiv.innerHTML = `
+                        <div class="${allPassed ? 'pass' : 'fail'}">
+                            ${allPassed ? 'PASS' : 'FAIL'}
+                        </div>
+                        <ul>
+                            ${result.checks.map(c => `<li>${c.passed ? '✓' : '✗'} ${c.message}</li>`).join('')}
+                        </ul>
+                    `;
+                    
+                    if (result.metrics) {
+                        metricsDiv.innerHTML = `
+                            <strong>Metrics:</strong>
+                            <ul>
+                                ${Object.entries(result.metrics).map(([key, value]) => 
+                                    `<li>${key}: ${value}</li>`
+                                ).join('')}
+                            </ul>
+                        `;
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = `
+                        <div class="fail">ERROR</div>
+                        <p>${error.message}</p>
+                    `;
+                }
+                
+                spinBtn.disabled = false;
+            });
+        }
+
+        // Test 1: Basic spin animation
+        async function test1(testNum) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const wheel = new SpinningWheel('test-room-1');
+            
+            // Mock selectRandomTopic to return a known topic
+            wheel.selectRandomTopic = async () => {
+                wheel.selectedTopic = TOPICS[0];
+                return TOPICS[0];
+            };
+            
+            wheel.renderWithUsedTopics(container, []);
+            
+            const startTime = Date.now();
+            const selectedTopic = await wheel.spinWithEnhancedAnimation();
+            const endTime = Date.now();
+            const actualDuration = (endTime - startTime) / 1000;
+            
+            return {
+                checks: [
+                    { passed: selectedTopic !== null, message: `Promise resolved with topic: ${selectedTopic}` },
+                    { passed: wheel.spinStartTime !== null, message: `spinStartTime tracked: ${wheel.spinStartTime}` },
+                    { passed: actualDuration >= 2.5 && actualDuration <= 8, message: `Animation duration: ${actualDuration.toFixed(2)}s (expected 3-7s, allowing margin)` },
+                    { passed: !wheel.isSpinning, message: `isSpinning reset to false after animation` }
+                ],
+                metrics: {
+                    'Selected Topic': selectedTopic,
+                    'Animation Duration': `${actualDuration.toFixed(2)}s`,
+                    'Start Time': new Date(wheel.spinStartTime).toLocaleTimeString()
+                }
+            };
+        }
+
+        // Test 2: Animation timing verification
+        async function test2(testNum) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const wheel = new SpinningWheel('test-room-2');
+            
+            // Mock selectRandomTopic
+            wheel.selectRandomTopic = async () => {
+                wheel.selectedTopic = TOPICS[1];
+                return TOPICS[1];
+            };
+            
+            wheel.renderWithUsedTopics(container, []);
+            
+            const startTime = Date.now();
+            await wheel.spinWithEnhancedAnimation();
+            const endTime = Date.now();
+            const actualDuration = (endTime - startTime) / 1000;
+            
+            return {
+                checks: [
+                    { passed: actualDuration >= 2.5, message: `Duration >= 3s: ${actualDuration.toFixed(2)}s` },
+                    { passed: actualDuration <= 8, message: `Duration <= 7s: ${actualDuration.toFixed(2)}s` }
+                ],
+                metrics: {
+                    'Actual Duration': `${actualDuration.toFixed(2)}s`,
+                    'Expected Range': '3-7 seconds'
+                }
+            };
+        }
+
+        // Test 3: Spinning class verification
+        async function test3(testNum) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const wheel = new SpinningWheel('test-room-3');
+            
+            // Mock selectRandomTopic
+            wheel.selectRandomTopic = async () => {
+                wheel.selectedTopic = TOPICS[2];
+                return TOPICS[2];
+            };
+            
+            wheel.renderWithUsedTopics(container, []);
+            
+            let classAppliedDuringSpin = false;
+            let classRemovedAfterSpin = false;
+            
+            // Start spin
+            const spinPromise = wheel.spinWithEnhancedAnimation();
+            
+            // Check class during spin (after 100ms)
+            await new Promise(resolve => setTimeout(resolve, 100));
+            classAppliedDuringSpin = wheel.wheelElement.classList.contains('wheel--spinning');
+            
+            // Wait for spin to complete
+            await spinPromise;
+            
+            // Check class after spin
+            classRemovedAfterSpin = !wheel.wheelElement.classList.contains('wheel--spinning');
+            
+            return {
+                checks: [
+                    { passed: classAppliedDuringSpin, message: 'wheel--spinning class applied during animation' },
+                    { passed: classRemovedAfterSpin, message: 'wheel--spinning class removed after animation' }
+                ]
+            };
+        }
+
+        // Test 4: CSS transform verification
+        async function test4(testNum) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const wheel = new SpinningWheel('test-room-4');
+            
+            // Mock selectRandomTopic
+            wheel.selectRandomTopic = async () => {
+                wheel.selectedTopic = TOPICS[3];
+                return TOPICS[3];
+            };
+            
+            wheel.renderWithUsedTopics(container, []);
+            
+            // Start spin
+            const spinPromise = wheel.spinWithEnhancedAnimation();
+            
+            // Check CSS properties during spin (after 100ms)
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const transform = wheel.wheelElement.style.transform;
+            const transition = wheel.wheelElement.style.transition;
+            
+            const hasRotate = transform.includes('rotate');
+            const hasCubicBezier = transition.includes('cubic-bezier');
+            const hasTransform = transition.includes('transform');
+            
+            // Wait for spin to complete
+            await spinPromise;
+            
+            return {
+                checks: [
+                    { passed: hasRotate, message: `CSS transform uses rotate: ${transform.substring(0, 50)}...` },
+                    { passed: hasTransform, message: `Transition property is transform: ${transition.substring(0, 50)}...` },
+                    { passed: hasCubicBezier, message: `Cubic-bezier easing applied: ${transition.includes('cubic-bezier') ? 'Yes' : 'No'}` }
+                ],
+                metrics: {
+                    'Transform': transform.substring(0, 30) + '...',
+                    'Transition': transition.substring(0, 50) + '...'
+                }
+            };
+        }
+
+        // Initialize tests
+        runTest(1, test1);
+        runTest(2, test2);
+        runTest(3, test3);
+        runTest(4, test4);
+
+        console.log('Test page loaded. Click "Spin Wheel" buttons to run tests.');
+    </script>
+</body>
+</html>

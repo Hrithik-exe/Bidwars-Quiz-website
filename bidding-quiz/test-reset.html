@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Game Tests - Multiplayer Bidding Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            padding: 20px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px solid #000;
+        }
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #000;
+        }
+        .test-result.pass {
+            border-left-color: #00aa00;
+            background-color: #eeffee;
+        }
+        .test-result.fail {
+            border-left-color: #aa0000;
+            background-color: #ffeeee;
+        }
+        .test-result.pending {
+            border-left-color: #aaaa00;
+            background-color: #ffffee;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reset Game Functionality Tests</h1>
+    <p>Testing Task 15: Game reset functionality</p>
+    
+    <div id="test-results"></div>
+    
+    <div id="error-container"></div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get, update, remove } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        
+        import { firebaseConfig, db } from './js/firebase-config.js';
+        import { GameState } from './js/game-state.js';
+        import { UIManager } from './js/ui.js';
+        
+        const roomId = 'test-room-reset-' + Date.now();
+        const resultsDiv = document.getElementById('test-results');
+        
+        function addTestResult(testName, passed, message) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${passed ? '✓' : '✗'} ${testName}</strong><br>
+                ${message}
+            `;
+            resultsDiv.appendChild(resultDiv);
+        }
+        
+        function addTestSection(title) {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = `<h2>${title}</h2>`;
+            resultsDiv.appendChild(section);
+            return section;
+        }
+        
+        async function setupTestGame() {
+            // Create test game state with players
+            const updates = {
+                [`rooms/${roomId}/phase`]: 'finished',
+                [`rooms/${roomId}/roundNumber`]: 10,
+                [`rooms/${roomId}/currentTopic`]: 'Science & Technology',
+                [`rooms/${roomId}/phaseStartTime`]: Date.now(),
+                [`rooms/${roomId}/usedTopics`]: [
+                    'Science & Technology',
+                    'World History',
+                    'Geography',
+                    'Literature & Arts',
+                    'Sports & Games',
+                    'Music & Entertainment',
+                    'Food & Culture',
+                    'Nature & Animals',
+                    'Mathematics & Logic',
+                    'Current Events'
+                ],
+                [`rooms/${roomId}/players/admin1`]: {
+                    name: 'Admin Player',
+                    score: 12500,
+                    isAdmin: true,
+                    currentBid: 1000,
+                    currentAnswer: 2
+                },
+                [`rooms/${roomId}/players/player1`]: {
+                    name: 'Player One',
+                    score: 9800,
+                    isAdmin: false,
+                    currentBid: 500,
+                    currentAnswer: 1
+                },
+                [`rooms/${roomId}/players/player2`]: {
+                    name: 'Player Two',
+                    score: 7200,
+                    isAdmin: false,
+                    currentBid: 300,
+                    currentAnswer: 0
+                },
+                [`rooms/${roomId}/rounds/1`]: {
+                    topic: 'Science & Technology',
+                    bids: { admin1: 1000, player1: 500, player2: 300 },
+                    answers: { admin1: 2, player1: 1, player2: 0 },
+                    results: {
+                        admin1: { correct: true, scoreChange: 2000, newScore: 7000 },
+                        player1: { correct: false, scoreChange: -500, newScore: 4500 },
+                        player2: { correct: true, scoreChange: 600, newScore: 5600 }
+                    }
+                }
+            };
+            
+            await update(ref(db), updates);
+        }
+        
+        async function runTests() {
+            try {
+                // Test 1: Setup
+                addTestSection('Test 1: Setup Test Game');
+                await setupTestGame();
+                addTestResult('Setup test game', true, 'Created game with 3 players, 10 rounds, finished phase');
+                
+                // Test 2: Verify initial state
+                addTestSection('Test 2: Verify Initial State');
+                const phaseSnapshot = await get(ref(db, `rooms/${roomId}/phase`));
+                const roundSnapshot = await get(ref(db, `rooms/${roomId}/roundNumber`));
+                const topicsSnapshot = await get(ref(db, `rooms/${roomId}/usedTopics`));
+                const player1Snapshot = await get(ref(db, `rooms/${roomId}/players/player1`));
+                
+                addTestResult(
+                    'Initial phase is finished',
+                    phaseSnapshot.val() === 'finished',
+                    `Phase: ${phaseSnapshot.val()}`
+                );
+                addTestResult(
+                    'Initial round is 10',
+                    roundSnapshot.val() === 10,
+                    `Round: ${roundSnapshot.val()}`
+                );
+                addTestResult(
+                    'Used topics has 10 items',
+                    topicsSnapshot.val()?.length === 10,
+                    `Used topics: ${topicsSnapshot.val()?.length}`
+                );
+                addTestResult(
+                    'Player score is not 5000',
+                    player1Snapshot.val()?.score !== 5000,
+                    `Player 1 score: ${player1Snapshot.val()?.score}`
+                );
+                
+                // Test 3: Non-admin cannot reset
+                addTestSection('Test 3: Non-Admin Cannot Reset');
+                const gameState = new GameState(roomId);
+                const nonAdminResult = await gameState.resetGame('player1');
+                addTestResult(
+                    'Non-admin reset rejected',
+                    !nonAdminResult.success && nonAdminResult.error === 'Only admins can reset the game',
+                    `Result: ${nonAdminResult.error}`
+                );
+                
+                // Test 4: Admin can reset
+                addTestSection('Test 4: Admin Can Reset Game');
+                const adminResult = await gameState.resetGame('admin1');
+                addTestResult(
+                    'Admin reset succeeds',
+                    adminResult.success === true,
+                    `Success: ${adminResult.success}`
+                );
+                
+                // Test 5: Verify reset state
+                addTestSection('Test 5: Verify Reset State');
+                
+                // Wait a moment for Firebase to update
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const resetPhase = await get(ref(db, `rooms/${roomId}/phase`));
+                addTestResult(
+                    'Phase reset to waiting',
+                    resetPhase.val() === 'waiting',
+                    `Phase: ${resetPhase.val()}`
+                );
+                
+                const resetRound = await get(ref(db, `rooms/${roomId}/roundNumber`));
+                addTestResult(
+                    'Round reset to 0',
+                    resetRound.val() === 0,
+                    `Round: ${resetRound.val()}`
+                );
+                
+                const resetTopics = await get(ref(db, `rooms/${roomId}/usedTopics`));
+                addTestResult(
+                    'Used topics cleared',
+                    !resetTopics.val() || resetTopics.val().length === 0,
+                    `Used topics: ${resetTopics.val()?.length || 0}`
+                );
+                
+                const resetTopic = await get(ref(db, `rooms/${roomId}/currentTopic`));
+                addTestResult(
+                    'Current topic cleared',
+                    resetTopic.val() === null,
+                    `Current topic: ${resetTopic.val()}`
+                );
+                
+                const resetPhaseTime = await get(ref(db, `rooms/${roomId}/phaseStartTime`));
+                addTestResult(
+                    'Phase start time cleared',
+                    resetPhaseTime.val() === null,
+                    `Phase start time: ${resetPhaseTime.val()}`
+                );
+                
+                const resetRounds = await get(ref(db, `rooms/${roomId}/rounds`));
+                addTestResult(
+                    'Round data cleared',
+                    resetRounds.val() === null,
+                    `Rounds: ${resetRounds.val()}`
+                );
+                
+                // Test 6: Verify player scores reset
+                addTestSection('Test 6: Verify Player Scores Reset');
+                
+                const adminPlayer = await get(ref(db, `rooms/${roomId}/players/admin1`));
+                addTestResult(
+                    'Admin score reset to 5000',
+                    adminPlayer.val()?.score === 5000,
+                    `Admin score: ${adminPlayer.val()?.score}`
+                );
+                addTestResult(
+                    'Admin bid cleared',
+                    adminPlayer.val()?.currentBid === 0,
+                    `Admin bid: ${adminPlayer.val()?.currentBid}`
+                );
+                addTestResult(
+                    'Admin answer cleared',
+                    adminPlayer.val()?.currentAnswer === null,
+                    `Admin answer: ${adminPlayer.val()?.currentAnswer}`
+                );
+                
+                const player1 = await get(ref(db, `rooms/${roomId}/players/player1`));
+                addTestResult(
+                    'Player 1 score reset to 5000',
+                    player1.val()?.score === 5000,
+                    `Player 1 score: ${player1.val()?.score}`
+                );
+                
+                const player2 = await get(ref(db, `rooms/${roomId}/players/player2`));
+                addTestResult(
+                    'Player 2 score reset to 5000',
+                    player2.val()?.score === 5000,
+                    `Player 2 score: ${player2.val()?.score}`
+                );
+                
+                // Test 7: UI Confirmation Dialog
+                addTestSection('Test 7: UI Confirmation Dialog');
+                const uiManager = new UIManager(roomId);
+                
+                // Test confirmation dialog exists
+                addTestResult(
+                    'UIManager has showConfirmation method',
+                    typeof uiManager.showConfirmation === 'function',
+                    'Method exists'
+                );
+                
+                // Test 8: Cleanup
+                addTestSection('Test 8: Cleanup');
+                await remove(ref(db, `rooms/${roomId}`));
+                addTestResult('Cleanup', true, 'Test room removed from Firebase');
+                
+                // Summary
+                addTestSection('Test Summary');
+                const allResults = document.querySelectorAll('.test-result');
+                const passed = document.querySelectorAll('.test-result.pass').length;
+                const failed = document.querySelectorAll('.test-result.fail').length;
+                
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = `test-result ${failed === 0 ? 'pass' : 'fail'}`;
+                summaryDiv.innerHTML = `
+                    <strong>Total: ${allResults.length} tests</strong><br>
+                    Passed: ${passed}<br>
+                    Failed: ${failed}
+                `;
+                resultsDiv.appendChild(summaryDiv);
+                
+            } catch (error) {
+                console.error('Test error:', error);
+                addTestResult('Test execution', false, `Error: ${error.message}`);
+            }
+        }
+        
+        // Run tests when page loads
+        console.log('Starting reset game tests...');
+        runTests();
+    </script>
+</body>
+</html>

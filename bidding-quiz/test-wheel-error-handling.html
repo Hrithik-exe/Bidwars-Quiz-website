@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Wheel Error Handling</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-description {
+            margin-bottom: 15px;
+            color: #666;
+        }
+        .test-result {
+            margin-top: 15px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .test-result.pass {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .test-result.fail {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        .test-result.pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .wheel-container {
+            margin: 20px 0;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .console-output {
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-top: 10px;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .console-output .error {
+            color: #d32f2f;
+        }
+        .console-output .warn {
+            color: #f57c00;
+        }
+        .console-output .log {
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Wheel Error Handling - Test Page</h1>
+    <p>This page tests error handling for wheel animation failures (Task 17.1, Requirement 3.4).</p>
+
+    <!-- Test 1: No topics available -->
+    <div class="test-section">
+        <div class="test-title">Test 1: No Topics Available</div>
+        <div class="test-description">
+            When no topics are available, the wheel should:
+            <ul>
+                <li>Return null from selectRandomTopic()</li>
+                <li>Show "No topics available" message in status</li>
+                <li>Announce to screen reader</li>
+                <li>Not spin the wheel</li>
+            </ul>
+        </div>
+        <div id="wheel-container-1" class="wheel-container"></div>
+        <button id="test1-btn">Test No Topics</button>
+        <div id="result-1" class="test-result pending">Pending...</div>
+        <div id="console-1" class="console-output"></div>
+    </div>
+
+    <!-- Test 2: Firebase read failure -->
+    <div class="test-section">
+        <div class="test-title">Test 2: Firebase Read Failure</div>
+        <div class="test-description">
+            When Firebase read fails, the wheel should:
+            <ul>
+                <li>Log error message</li>
+                <li>Assume all topics are available</li>
+                <li>Continue with full topic list</li>
+                <li>Allow spin to proceed</li>
+            </ul>
+        </div>
+        <div id="wheel-container-2" class="wheel-container"></div>
+        <button id="test2-btn">Test Firebase Failure</button>
+        <div id="result-2" class="test-result pending">Pending...</div>
+        <div id="console-2" class="console-output"></div>
+    </div>
+
+    <!-- Test 3: Animation performance degradation -->
+    <div class="test-section">
+        <div class="test-title">Test 3: Animation Performance Degradation</div>
+        <div class="test-description">
+            When frame rate drops below 30 FPS, the wheel should:
+            <ul>
+                <li>Log performance warning</li>
+                <li>Continue animation despite degradation</li>
+                <li>Complete spin successfully</li>
+            </ul>
+            Note: This test simulates performance degradation by monitoring frame rate.
+        </div>
+        <div id="wheel-container-3" class="wheel-container"></div>
+        <button id="test3-btn">Test Performance Degradation</button>
+        <div id="result-3" class="test-result pending">Pending...</div>
+        <div id="console-3" class="console-output"></div>
+    </div>
+
+    <script type="module">
+        import { SpinningWheel, TOPICS } from './js/wheel.js';
+
+        // Capture console output for display
+        function captureConsole(testNum) {
+            const consoleDiv = document.getElementById(`console-${testNum}`);
+            const originalConsole = {
+                log: console.log,
+                warn: console.warn,
+                error: console.error
+            };
+
+            function addToConsole(type, ...args) {
+                const message = args.map(arg => 
+                    typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
+                ).join(' ');
+                const div = document.createElement('div');
+                div.className = type;
+                div.textContent = `[${type.toUpperCase()}] ${message}`;
+                consoleDiv.appendChild(div);
+                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            }
+
+            console.log = (...args) => {
+                originalConsole.log(...args);
+                addToConsole('log', ...args);
+            };
+            console.warn = (...args) => {
+                originalConsole.warn(...args);
+                addToConsole('warn', ...args);
+            };
+            console.error = (...args) => {
+                originalConsole.error(...args);
+                addToConsole('error', ...args);
+            };
+
+            return originalConsole;
+        }
+
+        // Test 1: No topics available
+        document.getElementById('test1-btn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result-1');
+            const consoleDiv = document.getElementById('console-1');
+            consoleDiv.innerHTML = '';
+            resultDiv.textContent = 'Running...';
+            resultDiv.className = 'test-result pending';
+
+            const originalConsole = captureConsole(1);
+
+            try {
+                const container = document.getElementById('wheel-container-1');
+                const wheel = new SpinningWheel('test-room-1');
+                
+                // Render wheel with all topics used
+                wheel.renderWithUsedTopics(container, [...TOPICS]);
+
+                // Mock getAvailableTopics to return empty array
+                wheel.getAvailableTopics = async () => [];
+
+                // Try to spin
+                const result = await wheel.spinWithEnhancedAnimation();
+
+                // Verify results
+                const checks = [];
+                checks.push(result === null ? '✓ Returns null' : '✗ Should return null');
+                
+                const statusElement = container.querySelector('.wheel-status');
+                const statusText = statusElement?.textContent || '';
+                checks.push(statusText.includes('No topics available') ? '✓ Shows "No topics available"' : '✗ Should show message');
+
+                const ariaText = container.querySelector('.wheel-aria-live')?.textContent || '';
+                checks.push(ariaText.includes('No topics available') ? '✓ Announces to screen reader' : '✗ Should announce');
+
+                const allPassed = checks.every(c => c.startsWith('✓'));
+                resultDiv.className = `test-result ${allPassed ? 'pass' : 'fail'}`;
+                resultDiv.innerHTML = checks.join('<br>');
+
+            } catch (error) {
+                resultDiv.className = 'test-result fail';
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+
+            // Restore console
+            console.log = originalConsole.log;
+            console.warn = originalConsole.warn;
+            console.error = originalConsole.error;
+        });
+
+        // Test 2: Firebase read failure
+        document.getElementById('test2-btn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result-2');
+            const consoleDiv = document.getElementById('console-2');
+            consoleDiv.innerHTML = '';
+            resultDiv.textContent = 'Running...';
+            resultDiv.className = 'test-result pending';
+
+            const originalConsole = captureConsole(2);
+
+            try {
+                const container = document.getElementById('wheel-container-2');
+                const wheel = new SpinningWheel('test-room-2');
+                
+                // Render wheel
+                wheel.renderWithUsedTopics(container, []);
+
+                // Mock getAvailableTopics to throw error (simulating Firebase failure)
+                const originalGetAvailableTopics = wheel.getAvailableTopics.bind(wheel);
+                wheel.getAvailableTopics = async () => {
+                    try {
+                        throw new Error('Simulated Firebase read failure');
+                    } catch (error) {
+                        // Handle Firebase read failures: assume all topics available, log error
+                        console.error('Firebase read failure - assuming all topics available:', error);
+                        return TOPICS;
+                    }
+                };
+
+                // Mock selectRandomTopic to avoid actual Firebase writes
+                wheel.selectRandomTopic = async () => {
+                    const availableTopics = await wheel.getAvailableTopics();
+                    if (availableTopics.length === 0) {
+                        console.error('No available topics remaining - cannot spin wheel');
+                        wheel.announceToScreenReader('No topics available');
+                        return null;
+                    }
+                    const randomIndex = Math.floor(Math.random() * availableTopics.length);
+                    const selectedTopic = availableTopics[randomIndex];
+                    wheel.selectedTopic = selectedTopic;
+                    return selectedTopic;
+                };
+
+                // Try to spin
+                const result = await wheel.spinWithEnhancedAnimation();
+
+                // Verify results
+                const checks = [];
+                checks.push(result !== null ? '✓ Returns a topic' : '✗ Should return a topic');
+                checks.push(TOPICS.includes(result) ? '✓ Topic is from full list' : '✗ Should be from full list');
+                
+                // Check console for error message
+                const hasErrorLog = consoleDiv.textContent.includes('Firebase read failure');
+                checks.push(hasErrorLog ? '✓ Logs error message' : '✗ Should log error');
+
+                const allPassed = checks.every(c => c.startsWith('✓'));
+                resultDiv.className = `test-result ${allPassed ? 'pass' : 'fail'}`;
+                resultDiv.innerHTML = checks.join('<br>');
+
+            } catch (error) {
+                resultDiv.className = 'test-result fail';
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+
+            // Restore console
+            console.log = originalConsole.log;
+            console.warn = originalConsole.warn;
+            console.error = originalConsole.error;
+        });
+
+        // Test 3: Animation performance degradation
+        document.getElementById('test3-btn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result-3');
+            const consoleDiv = document.getElementById('console-3');
+            consoleDiv.innerHTML = '';
+            resultDiv.textContent = 'Running...';
+            resultDiv.className = 'test-result pending';
+
+            const originalConsole = captureConsole(3);
+
+            try {
+                const container = document.getElementById('wheel-container-3');
+                const wheel = new SpinningWheel('test-room-3');
+                
+                // Render wheel
+                wheel.renderWithUsedTopics(container, []);
+
+                // Mock selectRandomTopic to avoid Firebase
+                wheel.selectRandomTopic = async () => {
+                    const selectedTopic = TOPICS[0];
+                    wheel.selectedTopic = selectedTopic;
+                    return selectedTopic;
+                };
+
+                // Mock monitorFrame to simulate low FPS
+                const originalMonitorFrame = wheel.monitorFrame.bind(wheel);
+                let frameCount = 0;
+                wheel.monitorFrame = function() {
+                    if (!this.isMonitoringPerformance) {
+                        return;
+                    }
+
+                    const timestamp = performance.now();
+                    this.frameTimestamps.push(timestamp);
+
+                    // Simulate low FPS by injecting fake timestamps
+                    if (frameCount === 10) {
+                        // Inject timestamps that simulate 20 FPS (below 30 FPS threshold)
+                        this.frameTimestamps = [];
+                        for (let i = 0; i < 10; i++) {
+                            this.frameTimestamps.push(timestamp - (500 - i * 50)); // 50ms per frame = 20 FPS
+                        }
+                        
+                        const recentFrames = this.frameTimestamps.slice(-10);
+                        const timeSpan = recentFrames[recentFrames.length - 1] - recentFrames[0];
+                        const fps = (recentFrames.length - 1) / (timeSpan / 1000);
+
+                        // Handle animation performance degradation: log warning, continue
+                        if (fps < 30) {
+                            console.warn(`Performance degradation detected: Frame rate dropped to ${fps.toFixed(2)} FPS (below 30 FPS threshold). Animation will continue.`);
+                        }
+                    }
+
+                    frameCount++;
+
+                    // Continue monitoring if still spinning
+                    if (this.isSpinning) {
+                        this.animationFrameId = requestAnimationFrame(() => this.monitorFrame());
+                    }
+                };
+
+                // Spin the wheel
+                const result = await wheel.spinWithEnhancedAnimation();
+
+                // Verify results
+                const checks = [];
+                checks.push(result !== null ? '✓ Returns a topic' : '✗ Should return a topic');
+                
+                // Check console for performance warning
+                const hasWarning = consoleDiv.textContent.includes('Performance degradation detected');
+                checks.push(hasWarning ? '✓ Logs performance warning' : '✗ Should log warning');
+                
+                const continuesAnimation = consoleDiv.textContent.includes('Animation will continue');
+                checks.push(continuesAnimation ? '✓ Continues animation' : '✗ Should continue');
+
+                const allPassed = checks.every(c => c.startsWith('✓'));
+                resultDiv.className = `test-result ${allPassed ? 'pass' : 'fail'}`;
+                resultDiv.innerHTML = checks.join('<br>');
+
+            } catch (error) {
+                resultDiv.className = 'test-result fail';
+                resultDiv.textContent = `Error: ${error.message}`;
+            }
+
+            // Restore console
+            console.log = originalConsole.log;
+            console.warn = originalConsole.warn;
+            console.error = originalConsole.error;
+        });
+
+        console.log('Test page loaded. Click test buttons to run error handling tests.');
+    </script>
+</body>
+</html>

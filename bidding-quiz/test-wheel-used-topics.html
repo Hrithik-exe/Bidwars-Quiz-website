@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Wheel with Used Topics</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-container {
+            margin-bottom: 40px;
+            border: 2px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-description {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .test-result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .pass {
+            color: green;
+            font-weight: bold;
+        }
+        .fail {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Wheel with Used Topics - Test Page</h1>
+    <p>This page tests the renderWithUsedTopics method implementation.</p>
+
+    <!-- Test 1: No used topics -->
+    <div class="test-container">
+        <div class="test-title">Test 1: No Used Topics</div>
+        <div class="test-description">
+            All topics should be available (opacity 1.0, no grayscale). 
+            Status should show "10 topics remaining".
+        </div>
+        <div id="wheel-container-1"></div>
+        <div class="test-result" id="result-1"></div>
+    </div>
+
+    <!-- Test 2: Some used topics -->
+    <div class="test-container">
+        <div class="test-title">Test 2: Some Used Topics (3 used)</div>
+        <div class="test-description">
+            3 topics should appear dimmed with grayscale filter.
+            Status should show "7 topics remaining".
+        </div>
+        <div id="wheel-container-2"></div>
+        <div class="test-result" id="result-2"></div>
+    </div>
+
+    <!-- Test 3: Most topics used -->
+    <div class="test-container">
+        <div class="test-title">Test 3: Most Topics Used (8 used)</div>
+        <div class="test-description">
+            8 topics should appear dimmed with grayscale filter.
+            Status should show "2 topics remaining".
+        </div>
+        <div id="wheel-container-3"></div>
+        <div class="test-result" id="result-3"></div>
+    </div>
+
+    <!-- Test 4: All topics used -->
+    <div class="test-container">
+        <div class="test-title">Test 4: All Topics Used</div>
+        <div class="test-description">
+            All topics should appear dimmed with grayscale filter.
+            Status should show "No topics available".
+        </div>
+        <div id="wheel-container-4"></div>
+        <div class="test-result" id="result-4"></div>
+    </div>
+
+    <!-- Test 5: Single topic remaining -->
+    <div class="test-container">
+        <div class="test-title">Test 5: Single Topic Remaining</div>
+        <div class="test-description">
+            9 topics should appear dimmed with grayscale filter.
+            Status should show "1 topic remaining" (singular).
+        </div>
+        <div id="wheel-container-5"></div>
+        <div class="test-result" id="result-5"></div>
+    </div>
+
+    <script type="module">
+        import { SpinningWheel, TOPICS } from './js/wheel.js';
+
+        // Helper function to verify test results
+        function verifyTest(testNum, expectedUsedCount, expectedAvailableCount, expectedStatusText) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const resultDiv = document.getElementById(`result-${testNum}`);
+            
+            const usedSegments = container.querySelectorAll('.wheel-segment--used');
+            const availableSegments = container.querySelectorAll('.wheel-segment--available');
+            const statusText = container.querySelector('.wheel-status').textContent;
+            const ariaLive = container.querySelector('.wheel-aria-live');
+            const overlay = container.querySelector('.wheel-topic-overlay');
+            
+            let results = [];
+            
+            // Check used segments count
+            if (usedSegments.length === expectedUsedCount) {
+                results.push(`✓ Used segments: ${usedSegments.length} (expected ${expectedUsedCount})`);
+            } else {
+                results.push(`✗ Used segments: ${usedSegments.length} (expected ${expectedUsedCount})`);
+            }
+            
+            // Check available segments count
+            if (availableSegments.length === expectedAvailableCount) {
+                results.push(`✓ Available segments: ${availableSegments.length} (expected ${expectedAvailableCount})`);
+            } else {
+                results.push(`✗ Available segments: ${availableSegments.length} (expected ${expectedAvailableCount})`);
+            }
+            
+            // Check status text
+            if (statusText === expectedStatusText) {
+                results.push(`✓ Status text: "${statusText}"`);
+            } else {
+                results.push(`✗ Status text: "${statusText}" (expected "${expectedStatusText}")`);
+            }
+            
+            // Check ARIA live region exists
+            if (ariaLive) {
+                results.push(`✓ ARIA live region present`);
+            } else {
+                results.push(`✗ ARIA live region missing`);
+            }
+            
+            // Check topic overlay exists
+            if (overlay) {
+                results.push(`✓ Topic overlay present`);
+            } else {
+                results.push(`✗ Topic overlay missing`);
+            }
+            
+            // Check CSS classes on used segments
+            let cssCorrect = true;
+            usedSegments.forEach(segment => {
+                const styles = window.getComputedStyle(segment);
+                const opacity = parseFloat(styles.opacity);
+                if (opacity > 0.5) {
+                    cssCorrect = false;
+                }
+            });
+            
+            if (cssCorrect && usedSegments.length > 0) {
+                results.push(`✓ Used segments have reduced opacity`);
+            } else if (usedSegments.length > 0) {
+                results.push(`✗ Used segments opacity not reduced`);
+            }
+            
+            const allPassed = results.every(r => r.startsWith('✓'));
+            resultDiv.innerHTML = `
+                <div class="${allPassed ? 'pass' : 'fail'}">
+                    ${allPassed ? 'PASS' : 'FAIL'}
+                </div>
+                <ul>
+                    ${results.map(r => `<li>${r}</li>`).join('')}
+                </ul>
+            `;
+        }
+
+        // Test 1: No used topics
+        const wheel1 = new SpinningWheel('test-room-1');
+        wheel1.renderWithUsedTopics(document.getElementById('wheel-container-1'), []);
+        verifyTest(1, 0, 10, '10 topics remaining');
+
+        // Test 2: 3 used topics
+        const wheel2 = new SpinningWheel('test-room-2');
+        const usedTopics2 = [TOPICS[0], TOPICS[1], TOPICS[2]];
+        wheel2.renderWithUsedTopics(document.getElementById('wheel-container-2'), usedTopics2);
+        verifyTest(2, 3, 7, '7 topics remaining');
+
+        // Test 3: 8 used topics
+        const wheel3 = new SpinningWheel('test-room-3');
+        const usedTopics3 = TOPICS.slice(0, 8);
+        wheel3.renderWithUsedTopics(document.getElementById('wheel-container-3'), usedTopics3);
+        verifyTest(3, 8, 2, '2 topics remaining');
+
+        // Test 4: All topics used
+        const wheel4 = new SpinningWheel('test-room-4');
+        wheel4.renderWithUsedTopics(document.getElementById('wheel-container-4'), [...TOPICS]);
+        verifyTest(4, 10, 0, 'No topics available');
+
+        // Test 5: Single topic remaining
+        const wheel5 = new SpinningWheel('test-room-5');
+        const usedTopics5 = TOPICS.slice(0, 9);
+        wheel5.renderWithUsedTopics(document.getElementById('wheel-container-5'), usedTopics5);
+        verifyTest(5, 9, 1, '1 topic remaining');
+
+        console.log('All tests executed. Check the page for results.');
+    </script>
+</body>
+</html>

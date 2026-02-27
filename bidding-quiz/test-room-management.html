@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Room Management Test - Bidding Quiz</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .test-container {
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 30px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .test-section {
+      margin-bottom: 30px;
+      padding: 20px;
+      border: 2px solid #ecf0f1;
+      border-radius: 8px;
+    }
+
+    .test-section h2 {
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .test-result {
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    .test-result.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .test-result.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .test-result.info {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .btn-primary {
+      background-color: #3498db;
+      color: white;
+    }
+
+    .btn-success {
+      background-color: #27ae60;
+      color: white;
+    }
+
+    .btn-danger {
+      background-color: #e74c3c;
+      color: white;
+    }
+
+    .btn:hover {
+      opacity: 0.9;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    input[type="text"] {
+      padding: 8px;
+      border: 2px solid #ecf0f1;
+      border-radius: 5px;
+      font-size: 14px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🧪 Room Management System Test</h1>
+    <p>Test the room management functionality including creation, joining, and spectator mode.</p>
+
+    <!-- Test 1: Room Code Generator -->
+    <div class="test-section">
+      <h2>Test 1: Room Code Generator</h2>
+      <button class="btn btn-primary" id="test-generate-code">Generate Room Code</button>
+      <button class="btn btn-primary" id="test-validate-code">Validate Code Format</button>
+      <div id="test1-result" class="test-result info" style="display: none;"></div>
+    </div>
+
+    <!-- Test 2: Room Creation -->
+    <div class="test-section">
+      <h2>Test 2: Room Creation</h2>
+      <button class="btn btn-success" id="test-create-room">Create Room</button>
+      <div id="test2-result" class="test-result info" style="display: none;"></div>
+    </div>
+
+    <!-- Test 3: Room Info Retrieval -->
+    <div class="test-section">
+      <h2>Test 3: Room Info Retrieval</h2>
+      <input type="text" id="room-code-input" placeholder="Enter room code" maxlength="6" style="text-transform: uppercase;">
+      <button class="btn btn-primary" id="test-get-room-info">Get Room Info</button>
+      <div id="test3-result" class="test-result info" style="display: none;"></div>
+    </div>
+
+    <!-- Test 4: Room Joining -->
+    <div class="test-section">
+      <h2>Test 4: Room Joining</h2>
+      <input type="text" id="join-room-code" placeholder="Room code" maxlength="6" style="text-transform: uppercase;">
+      <input type="text" id="join-player-name" placeholder="Player name">
+      <button class="btn btn-success" id="test-join-room">Join as Player</button>
+      <button class="btn btn-primary" id="test-join-spectator">Join as Spectator</button>
+      <div id="test4-result" class="test-result info" style="display: none;"></div>
+    </div>
+
+    <!-- Test 5: Activity Tracking -->
+    <div class="test-section">
+      <h2>Test 5: Activity Tracking</h2>
+      <input type="text" id="activity-room-id" placeholder="Room ID">
+      <button class="btn btn-primary" id="test-update-activity">Update Activity</button>
+      <div id="test5-result" class="test-result info" style="display: none;"></div>
+    </div>
+
+    <!-- Test 6: Inactivity Tracker -->
+    <div class="test-section">
+      <h2>Test 6: Inactivity Tracker</h2>
+      <button class="btn btn-success" id="test-start-tracker">Start Tracker</button>
+      <button class="btn btn-danger" id="test-stop-tracker">Stop Tracker</button>
+      <button class="btn btn-primary" id="test-check-inactive">Check Inactive Rooms</button>
+      <div id="test6-result" class="test-result info" style="display: none;"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { RoomManager } from './js/room-manager.js';
+    import { RoomCodeGenerator } from './js/room-code-generator.js';
+    import { InactivityTracker } from './js/inactivity-tracker.js';
+
+    const roomManager = new RoomManager();
+    const codeGenerator = new RoomCodeGenerator();
+    let testRoomCode = null;
+    let testRoomId = null;
+
+    // Helper function to display results
+    function showResult(elementId, message, type = 'info') {
+      const element = document.getElementById(elementId);
+      element.textContent = message;
+      element.className = `test-result ${type}`;
+      element.style.display = 'block';
+    }
+
+    // Test 1: Room Code Generator
+    document.getElementById('test-generate-code').addEventListener('click', async () => {
+      try {
+        const code = await codeGenerator.generate();
+        showResult('test1-result', `✓ Generated code: ${code}\nLength: ${code.length}\nValid format: ${codeGenerator.validate(code)}`, 'success');
+        testRoomCode = code;
+      } catch (error) {
+        showResult('test1-result', `✗ Error: ${error.message}`, 'error');
+      }
+    });
+
+    document.getElementById('test-validate-code').addEventListener('click', () => {
+      const testCodes = ['ABC123', 'ABCDEF', '123456', 'ABC12', 'ABC1234', 'ABCDE1', 'ABC0O1'];
+      const results = testCodes.map(code => {
+        const valid = codeGenerator.validate(code);
+        return `${code}: ${valid ? '✓ Valid' : '✗ Invalid'}`;
+      });
+      showResult('test1-result', results.join('\n'), 'info');
+    });
+
+    // Test 2: Room Creation
+    document.getElementById('test-create-room').addEventListener('click', async () => {
+      try {
+        showResult('test2-result', 'Creating room...', 'info');
+        const result = await roomManager.createRoom();
+        
+        if (result.success) {
+          testRoomCode = result.roomCode;
+          testRoomId = result.roomId;
+          showResult('test2-result', `✓ Room created successfully!\nRoom Code: ${result.roomCode}\nRoom ID: ${result.roomId}`, 'success');
+        } else {
+          showResult('test2-result', `✗ Failed to create room\nError: ${result.error}\nError Code: ${result.errorCode}`, 'error');
+        }
+      } catch (error) {
+        showResult('test2-result', `✗ Exception: ${error.message}`, 'error');
+      }
+    });
+
+    // Test 3: Room Info Retrieval
+    document.getElementById('test-get-room-info').addEventListener('click', async () => {
+      const roomCode = document.getElementById('room-code-input').value.trim().toUpperCase();
+      
+      if (!roomCode) {
+        showResult('test3-result', '✗ Please enter a room code', 'error');
+        return;
+      }
+
+      try {
+        showResult('test3-result', 'Retrieving room info...', 'info');
+        const result = await roomManager.getRoomInfo(roomCode);
+        
+        if (result.exists) {
+          showResult('test3-result', `✓ Room found!\nRoom ID: ${result.roomId}\nStatus: ${result.status}\nPhase: ${result.phase}\nCreated: ${new Date(result.createdAt).toLocaleString()}\nLast Activity: ${new Date(result.lastActivityAt).toLocaleString()}`, 'success');
+        } else {
+          showResult('test3-result', `✗ Room not found\nError: ${result.error}\nError Code: ${result.errorCode}`, 'error');
+        }
+      } catch (error) {
+        showResult('test3-result', `✗ Exception: ${error.message}`, 'error');
+      }
+    });
+
+    // Test 4: Room Joining
+    document.getElementById('test-join-room').addEventListener('click', async () => {
+      await testJoinRoom(false);
+    });
+
+    document.getElementById('test-join-spectator').addEventListener('click', async () => {
+      await testJoinRoom(true);
+    });
+
+    async function testJoinRoom(isAdmin) {
+      const roomCode = document.getElementById('join-room-code').value.trim().toUpperCase();
+      const playerName = document.getElementById('join-player-name').value.trim();
+      
+      if (!roomCode || !playerName) {
+        showResult('test4-result', '✗ Please enter both room code and player name', 'error');
+        return;
+      }
+
+      try {
+        showResult('test4-result', `Joining room as ${isAdmin ? 'spectator' : 'player'}...`, 'info');
+        const result = await roomManager.joinRoom(roomCode, playerName, isAdmin);
+        
+        if (result.success) {
+          showResult('test4-result', `✓ Successfully joined room!\nRoom ID: ${result.roomId}\nPlayer ID: ${result.playerId}\nMode: ${isAdmin ? 'Spectator' : 'Player'}`, 'success');
+        } else {
+          showResult('test4-result', `✗ Failed to join room\nError: ${result.error}\nError Code: ${result.errorCode}`, 'error');
+        }
+      } catch (error) {
+        showResult('test4-result', `✗ Exception: ${error.message}`, 'error');
+      }
+    }
+
+    // Test 5: Activity Tracking
+    document.getElementById('test-update-activity').addEventListener('click', async () => {
+      const roomId = document.getElementById('activity-room-id').value.trim() || testRoomId;
+      
+      if (!roomId) {
+        showResult('test5-result', '✗ Please enter a room ID or create a room first', 'error');
+        return;
+      }
+
+      try {
+        showResult('test5-result', 'Updating activity timestamp...', 'info');
+        await roomManager.updateActivity(roomId);
+        showResult('test5-result', `✓ Activity timestamp updated for room ${roomId}\nTimestamp: ${new Date().toLocaleString()}`, 'success');
+      } catch (error) {
+        showResult('test5-result', `✗ Exception: ${error.message}`, 'error');
+      }
+    });
+
+    // Test 6: Inactivity Tracker
+    document.getElementById('test-start-tracker').addEventListener('click', () => {
+      try {
+        roomManager.startInactivityTracking();
+        showResult('test6-result', `✓ Inactivity tracker started\nCheck interval: ${roomManager.inactivityTracker.getCheckInterval() / 1000}s\nInactivity threshold: ${roomManager.inactivityTracker.getInactivityThreshold() / 60000} minutes`, 'success');
+      } catch (error) {
+        showResult('test6-result', `✗ Exception: ${error.message}`, 'error');
+      }
+    });
+
+    document.getElementById('test-stop-tracker').addEventListener('click', () => {
+      try {
+        roomManager.stopInactivityTracking();
+        showResult('test6-result', '✓ Inactivity tracker stopped', 'success');
+      } catch (error) {
+        showResult('test6-result', `✗ Exception: ${error.message}`, 'error');
+      }
+    });
+
+    document.getElementById('test-check-inactive').addEventListener('click', async () => {
+      try {
+        showResult('test6-result', 'Checking for inactive rooms...', 'info');
+        await roomManager.inactivityTracker.checkInactiveRooms();
+        showResult('test6-result', '✓ Inactive room check completed\nCheck console for details', 'success');
+      } catch (error) {
+        showResult('test6-result', `✗ Exception: ${error.message}`, 'error');
+      }
+    });
+
+    // Auto-uppercase room code inputs
+    document.getElementById('room-code-input').addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+    document.getElementById('join-room-code').addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bidding Screen Demo - Multiplayer Bidding Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Error Container -->
+        <div id="error-container"></div>
+
+        <!-- Phase Indicator -->
+        <div id="phase-indicator-container">
+            <div class="phase-indicator phase-bidding">
+                <div class="phase-header">
+                    <span class="round-number">Round 3/10</span>
+                    <span class="phase-name">BIDDING</span>
+                </div>
+                <div class="phase-instruction">Place your bid</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content">
+            <div class="bidding-screen">
+                <div class="topic-display">
+                    <h2>Topic: Science & Technology</h2>
+                </div>
+                
+                <div class="player-score-display">
+                    <p>Your Score: <span class="score-value">6500</span></p>
+                </div>
+                
+                <div class="bidding-box">
+                    <h3>How confident are you?</h3>
+                    
+                    <div class="bid-input-group">
+                        <label for="bid-amount">Bid amount:</label>
+                        <input 
+                            type="number" 
+                            id="bid-amount" 
+                            min="1" 
+                            max="6500"
+                            placeholder="Enter bid"
+                            autocomplete="off"
+                        />
+                    </div>
+                    
+                    <button id="submit-bid-button" type="button" class="submit-bid-button">
+                        SUBMIT BID
+                    </button>
+                    
+                    <div id="bid-error" class="bid-error"></div>
+                    
+                    <div class="scoring-rules">
+                        <p>• Correct: +2x your bid</p>
+                        <p>• Wrong: -1x your bid</p>
+                    </div>
+                </div>
+
+                <!-- Bid Summary (shown after bidding phase) -->
+                <div id="bid-summary-container">
+                    <!-- Will be populated after bid submission -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div id="leaderboard-container">
+            <div class="leaderboard">
+                <h3>Leaderboard</h3>
+                <div class="leaderboard-list">
+                    <div class="leaderboard-item">
+                        <span class="rank">1</span>
+                        <span class="name">Player A</span>
+                        <span class="score">7200</span>
+                    </div>
+                    <div class="leaderboard-item current-player">
+                        <span class="rank">2</span>
+                        <span class="name">You</span>
+                        <span class="score">6500</span>
+                    </div>
+                    <div class="leaderboard-item">
+                        <span class="rank">3</span>
+                        <span class="name">Player B</span>
+                        <span class="score">5800</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo validation logic
+        const bidInput = document.getElementById('bid-amount');
+        const submitButton = document.getElementById('submit-bid-button');
+        const bidError = document.getElementById('bid-error');
+        const playerScore = 6500;
+
+        function validateBid(bidValue) {
+            const bid = parseFloat(bidValue);
+
+            if (bidValue === '') {
+                bidError.textContent = '';
+                return false;
+            }
+
+            if (isNaN(bid)) {
+                bidError.textContent = 'Please enter a valid number';
+                return false;
+            }
+
+            if (bid <= 0) {
+                bidError.textContent = 'Bid must be greater than zero';
+                return false;
+            }
+
+            if (bid > playerScore) {
+                bidError.textContent = 'Bid cannot exceed your current score';
+                return false;
+            }
+
+            bidError.textContent = '';
+            return true;
+        }
+
+        function handleBidSubmit() {
+            const bidValue = bidInput.value;
+            
+            if (!validateBid(bidValue)) {
+                return;
+            }
+
+            const bid = parseFloat(bidValue);
+
+            // Disable input
+            bidInput.disabled = true;
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+
+            // Simulate submission
+            setTimeout(() => {
+                // Show confirmation
+                const biddingBox = document.querySelector('.bidding-box');
+                biddingBox.innerHTML = `
+                    <div class="bid-confirmation">
+                        <h3>✓ Bid Submitted</h3>
+                        <p class="bid-amount-display">You bid: <strong>${bid}</strong> points</p>
+                        <p class="waiting-message">Waiting for other players...</p>
+                    </div>
+                `;
+
+                // Show bid summary
+                const bidSummaryContainer = document.getElementById('bid-summary-container');
+                bidSummaryContainer.innerHTML = `
+                    <div class="bid-summary">
+                        <h3>Bid Summary</h3>
+                        <div class="bid-summary-content">
+                            <p class="player-bid">You bid: <strong>${bid}</strong> points</p>
+                            <p>Average bid: <strong>850</strong> points</p>
+                            <p>Highest bid: <strong>2000</strong> points</p>
+                            <p>Lowest bid: <strong>100</strong> points</p>
+                        </div>
+                    </div>
+                `;
+            }, 500);
+        }
+
+        // Event listeners
+        bidInput.addEventListener('input', () => {
+            validateBid(bidInput.value);
+        });
+
+        submitButton.addEventListener('click', handleBidSubmit);
+
+        bidInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                handleBidSubmit();
+            }
+        });
+
+        // Focus on input
+        bidInput.focus();
+    </script>
+</body>
+</html>

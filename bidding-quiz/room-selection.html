@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Room Selection - Bidding Quiz</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .room-selection-container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 30px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .room-selection-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .room-selection-header h1 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+
+    .room-selection-header p {
+      color: #7f8c8d;
+      font-size: 16px;
+    }
+
+    .room-option {
+      margin-bottom: 30px;
+      padding: 25px;
+      border: 2px solid #ecf0f1;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    .room-option:hover {
+      border-color: #3498db;
+      box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+    }
+
+    .room-option h2 {
+      color: #2c3e50;
+      margin-bottom: 15px;
+      font-size: 20px;
+    }
+
+    .room-option p {
+      color: #7f8c8d;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+      color: #2c3e50;
+      font-weight: 500;
+    }
+
+    .form-group input[type="text"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #ecf0f1;
+      border-radius: 5px;
+      font-size: 16px;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input[type="text"]:focus {
+      outline: none;
+      border-color: #3498db;
+    }
+
+    .form-group input[type="text"]:disabled {
+      background-color: #ecf0f1;
+      cursor: not-allowed;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .checkbox-group input[type="checkbox"] {
+      margin-right: 8px;
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+    }
+
+    .checkbox-group label {
+      color: #2c3e50;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background-color: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background-color: #2980b9;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+    }
+
+    .btn-success {
+      background-color: #27ae60;
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background-color: #229954;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(39, 174, 96, 0.3);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .error-message {
+      background-color: #fee;
+      color: #c33;
+      padding: 12px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      border-left: 4px solid #c33;
+    }
+
+    .success-message {
+      background-color: #efe;
+      color: #3c3;
+      padding: 12px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      border-left: 4px solid #3c3;
+    }
+
+    .room-code-display {
+      background-color: #ecf0f1;
+      padding: 20px;
+      border-radius: 5px;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .room-code-display .code {
+      font-size: 32px;
+      font-weight: bold;
+      color: #2c3e50;
+      letter-spacing: 4px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .room-code-display .label {
+      color: #7f8c8d;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .loading {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .divider {
+      text-align: center;
+      margin: 30px 0;
+      color: #95a5a6;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <div class="room-selection-container">
+    <div class="room-selection-header">
+      <h1>🎯 Bidding Quiz</h1>
+      <p>Create a new room or join an existing one</p>
+    </div>
+
+    <div id="message-container"></div>
+
+    <!-- Create Room Section -->
+    <div class="room-option" id="create-room-section">
+      <h2>Create New Room</h2>
+      <p>Start a new game and invite others to join</p>
+      <button class="btn btn-success" id="create-room-btn">Create Room</button>
+    </div>
+
+    <!-- Room Created Display -->
+    <div class="room-option" id="room-created-section" style="display: none;">
+      <h2>Room Created!</h2>
+      <div class="room-code-display">
+        <div class="label">Share this code with players:</div>
+        <div class="code" id="created-room-code"></div>
+      </div>
+      <div class="form-group">
+        <label for="creator-name">Your Name</label>
+        <input type="text" id="creator-name" placeholder="Enter your name" maxlength="20">
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="creator-admin-checkbox">
+        <label for="creator-admin-checkbox">Join as Admin (Spectator Mode)</label>
+      </div>
+      <button class="btn btn-primary" id="join-created-room-btn">Join Room</button>
+    </div>
+
+    <div class="divider">OR</div>
+
+    <!-- Join Room Section -->
+    <div class="room-option" id="join-room-section">
+      <h2>Join Existing Room</h2>
+      <p>Enter a room code to join a game</p>
+      <div class="form-group">
+        <label for="room-code-input">Room Code</label>
+        <input type="text" id="room-code-input" placeholder="Enter 6-character code" maxlength="6" style="text-transform: uppercase;">
+      </div>
+      <div class="form-group">
+        <label for="player-name-input">Your Name</label>
+        <input type="text" id="player-name-input" placeholder="Enter your name" maxlength="20">
+      </div>
+      <div class="checkbox-group">
+        <input type="checkbox" id="admin-checkbox">
+        <label for="admin-checkbox">Join as Admin (Spectator Mode)</label>
+      </div>
+      <button class="btn btn-primary" id="join-room-btn">Join Room</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { RoomManager } from './js/room-manager.js';
+    import { PlayerManager } from './js/player.js';
+
+    const roomManager = new RoomManager();
+    let createdRoomCode = null;
+    let createdRoomId = null;
+
+    // Get DOM elements
+    const createRoomBtn = document.getElementById('create-room-btn');
+    const joinRoomBtn = document.getElementById('join-room-btn');
+    const joinCreatedRoomBtn = document.getElementById('join-created-room-btn');
+    const messageContainer = document.getElementById('message-container');
+    const createRoomSection = document.getElementById('create-room-section');
+    const roomCreatedSection = document.getElementById('room-created-section');
+    const createdRoomCodeEl = document.getElementById('created-room-code');
+    const roomCodeInput = document.getElementById('room-code-input');
+    const playerNameInput = document.getElementById('player-name-input');
+    const creatorNameInput = document.getElementById('creator-name');
+    const adminCheckbox = document.getElementById('admin-checkbox');
+    const creatorAdminCheckbox = document.getElementById('creator-admin-checkbox');
+
+    // Auto-uppercase room code input
+    roomCodeInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.toUpperCase();
+    });
+
+    // Create room handler
+    createRoomBtn.addEventListener('click', async () => {
+      clearMessages();
+      setLoading(createRoomBtn, true);
+
+      try {
+        const result = await roomManager.createRoom();
+
+        if (result.success) {
+          createdRoomCode = result.roomCode;
+          createdRoomId = result.roomId;
+          
+          // Show room created section
+          createRoomSection.style.display = 'none';
+          roomCreatedSection.style.display = 'block';
+          createdRoomCodeEl.textContent = result.roomCode;
+          
+          showSuccess(`Room created successfully! Code: ${result.roomCode}`);
+          creatorNameInput.focus();
+        } else {
+          showError(result.error || 'Failed to create room');
+          setLoading(createRoomBtn, false);
+        }
+      } catch (error) {
+        console.error('Error creating room:', error);
+        showError('An unexpected error occurred. Please try again.');
+        setLoading(createRoomBtn, false);
+      }
+    });
+
+    // Join created room handler
+    joinCreatedRoomBtn.addEventListener('click', async () => {
+      const playerName = creatorNameInput.value.trim();
+      const isAdmin = creatorAdminCheckbox.checked;
+
+      if (!playerName) {
+        showError('Please enter your name');
+        creatorNameInput.focus();
+        return;
+      }
+
+      await joinRoom(createdRoomCode, playerName, isAdmin, joinCreatedRoomBtn);
+    });
+
+    // Join existing room handler
+    joinRoomBtn.addEventListener('click', async () => {
+      const roomCode = roomCodeInput.value.trim().toUpperCase();
+      const playerName = playerNameInput.value.trim();
+      const isAdmin = adminCheckbox.checked;
+
+      if (!roomCode) {
+        showError('Please enter a room code');
+        roomCodeInput.focus();
+        return;
+      }
+
+      if (!playerName) {
+        showError('Please enter your name');
+        playerNameInput.focus();
+        return;
+      }
+
+      await joinRoom(roomCode, playerName, isAdmin, joinRoomBtn);
+    });
+
+    // Join room function
+    async function joinRoom(roomCode, playerName, isAdmin, button) {
+      clearMessages();
+      setLoading(button, true);
+
+      try {
+        const result = await roomManager.joinRoom(roomCode, playerName, isAdmin);
+
+        if (result.success) {
+          const roomId = result.roomId;
+          
+          // If not admin, create player record
+          if (!isAdmin) {
+            const playerManager = new PlayerManager(roomId);
+            const playerResult = await playerManager.joinGame(playerName);
+            
+            if (!playerResult.success) {
+              showError(playerResult.error || 'Failed to join as player');
+              setLoading(button, false);
+              return;
+            }
+            
+            // Store player ID
+            localStorage.setItem('currentPlayerId', playerResult.playerId);
+          } else {
+            // Store spectator ID
+            localStorage.setItem('currentPlayerId', result.playerId);
+          }
+          
+          // Store room info
+          localStorage.setItem('currentRoomId', roomId);
+          localStorage.setItem('currentRoomCode', roomCode);
+          localStorage.setItem('isAdmin', isAdmin);
+          
+          showSuccess('Joining room...');
+          
+          // Redirect to game
+          setTimeout(() => {
+            window.location.href = `index.html?room=${roomId}`;
+          }, 500);
+        } else {
+          showError(result.error || 'Failed to join room');
+          setLoading(button, false);
+        }
+      } catch (error) {
+        console.error('Error joining room:', error);
+        showError('An unexpected error occurred. Please try again.');
+        setLoading(button, false);
+      }
+    }
+
+    // Helper functions
+    function showError(message) {
+      messageContainer.innerHTML = `<div class="error-message">${message}</div>`;
+    }
+
+    function showSuccess(message) {
+      messageContainer.innerHTML = `<div class="success-message">${message}</div>`;
+    }
+
+    function clearMessages() {
+      messageContainer.innerHTML = '';
+    }
+
+    function setLoading(button, loading) {
+      if (loading) {
+        button.disabled = true;
+        button.dataset.originalText = button.textContent;
+        button.innerHTML = '<span class="loading"></span>Loading...';
+      } else {
+        button.disabled = false;
+        button.textContent = button.dataset.originalText || button.textContent;
+      }
+    }
+  </script>
+</body>
+</html>

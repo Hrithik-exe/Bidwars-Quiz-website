@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Question Screen Demo - Multiplayer Bidding Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Error Container -->
+        <div id="error-container"></div>
+
+        <!-- Phase Indicator -->
+        <div id="phase-indicator-container">
+            <div class="phase-indicator phase-question">
+                <div class="phase-header">
+                    <span class="round-number">Round 3/10</span>
+                    <span class="phase-name">QUESTION</span>
+                </div>
+                <div class="phase-instruction">Answer the question</div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="main-content">
+            <div class="question-screen">
+                <div class="topic-display-small">
+                    <p>Science & Technology</p>
+                </div>
+                
+                <div class="question-display">
+                    <h2>What year was the first iPhone released?</h2>
+                </div>
+                
+                <div class="answers-box">
+                    <div class="answer-choice" data-answer-index="0">
+                        <input 
+                            type="radio" 
+                            id="answer-0" 
+                            name="answer" 
+                            value="0"
+                            class="answer-radio"
+                        />
+                        <label for="answer-0" class="answer-label">
+                            <span class="answer-letter">A.</span>
+                            <span class="answer-text">2005</span>
+                        </label>
+                    </div>
+
+                    <div class="answer-choice" data-answer-index="1">
+                        <input 
+                            type="radio" 
+                            id="answer-1" 
+                            name="answer" 
+                            value="1"
+                            class="answer-radio"
+                        />
+                        <label for="answer-1" class="answer-label">
+                            <span class="answer-letter">B.</span>
+                            <span class="answer-text">2007</span>
+                        </label>
+                    </div>
+
+                    <div class="answer-choice" data-answer-index="2">
+                        <input 
+                            type="radio" 
+                            id="answer-2" 
+                            name="answer" 
+                            value="2"
+                            class="answer-radio"
+                        />
+                        <label for="answer-2" class="answer-label">
+                            <span class="answer-letter">C.</span>
+                            <span class="answer-text">2009</span>
+                        </label>
+                    </div>
+
+                    <div class="answer-choice" data-answer-index="3">
+                        <input 
+                            type="radio" 
+                            id="answer-3" 
+                            name="answer" 
+                            value="3"
+                            class="answer-radio"
+                        />
+                        <label for="answer-3" class="answer-label">
+                            <span class="answer-letter">D.</span>
+                            <span class="answer-text">2011</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button id="submit-answer-button" type="button" class="submit-answer-button" disabled>
+                    SUBMIT ANSWER
+                </button>
+                
+                <div id="answer-error" class="answer-error"></div>
+                
+                <!-- Bid Summary -->
+                <div class="bid-summary">
+                    <h3>Bid Summary</h3>
+                    <div class="bid-summary-content">
+                        <p class="player-bid">You bid: <strong>1000</strong> points</p>
+                        <p>Average bid: <strong>850</strong> points</p>
+                        <p>Highest bid: <strong>2000</strong> points</p>
+                        <p>Lowest bid: <strong>100</strong> points</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div id="leaderboard-container">
+            <div class="leaderboard">
+                <h3>Leaderboard</h3>
+                <div class="leaderboard-list">
+                    <div class="leaderboard-item">
+                        <span class="rank">1</span>
+                        <span class="name">Player A</span>
+                        <span class="score">7200</span>
+                    </div>
+                    <div class="leaderboard-item current-player">
+                        <span class="rank">2</span>
+                        <span class="name">You</span>
+                        <span class="score">6500</span>
+                    </div>
+                    <div class="leaderboard-item">
+                        <span class="rank">3</span>
+                        <span class="name">Player B</span>
+                        <span class="score">5800</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Demo interaction logic
+        const answerChoices = document.querySelectorAll('.answer-choice');
+        const submitButton = document.getElementById('submit-answer-button');
+        const radioButtons = document.querySelectorAll('.answer-radio');
+
+        // Handle answer choice clicks
+        answerChoices.forEach(choice => {
+            choice.addEventListener('click', () => {
+                const radio = choice.querySelector('.answer-radio');
+                if (radio && !radio.disabled) {
+                    radio.checked = true;
+                    
+                    // Remove selected class from all choices
+                    answerChoices.forEach(c => c.classList.remove('selected'));
+                    
+                    // Add selected class to clicked choice
+                    choice.classList.add('selected');
+                    
+                    // Enable submit button
+                    submitButton.disabled = false;
+                }
+            });
+        });
+
+        // Handle radio button changes
+        radioButtons.forEach(radio => {
+            radio.addEventListener('change', () => {
+                if (radio.checked) {
+                    // Remove selected class from all choices
+                    answerChoices.forEach(c => c.classList.remove('selected'));
+                    
+                    // Add selected class to parent choice
+                    const parentChoice = radio.closest('.answer-choice');
+                    if (parentChoice) {
+                        parentChoice.classList.add('selected');
+                    }
+                    
+                    // Enable submit button
+                    submitButton.disabled = false;
+                }
+            });
+        });
+
+        // Handle submit button click
+        submitButton.addEventListener('click', () => {
+            const selectedRadio = document.querySelector('.answer-radio:checked');
+            if (selectedRadio) {
+                handleAnswerSubmit(parseInt(selectedRadio.value));
+            }
+        });
+
+        // Handle Enter key
+        document.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !submitButton.disabled) {
+                e.preventDefault();
+                submitButton.click();
+            }
+        });
+
+        function handleAnswerSubmit(answerIndex) {
+            // Disable all inputs
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+            
+            radioButtons.forEach(radio => {
+                radio.disabled = true;
+            });
+            
+            answerChoices.forEach(choice => {
+                choice.style.pointerEvents = 'none';
+            });
+
+            // Simulate submission
+            setTimeout(() => {
+                // Show confirmation
+                const answersBox = document.querySelector('.answers-box');
+                const confirmationDiv = document.createElement('div');
+                confirmationDiv.className = 'answer-confirmation';
+                confirmationDiv.innerHTML = `
+                    <p>✓ Answer Submitted</p>
+                    <p class="waiting-message">Waiting for other players...</p>
+                `;
+                answersBox.parentNode.insertBefore(confirmationDiv, answersBox.nextSibling);
+
+                // Hide submit button
+                submitButton.style.display = 'none';
+            }, 500);
+        }
+    </script>
+</body>
+</html>

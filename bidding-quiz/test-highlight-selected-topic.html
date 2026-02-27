@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Highlight Selected Topic</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-container {
+            margin-bottom: 40px;
+            border: 2px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-description {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .test-result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .pass {
+            color: green;
+            font-weight: bold;
+        }
+        .fail {
+            color: red;
+            font-weight: bold;
+        }
+        .info {
+            color: blue;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Highlight Selected Topic - Test Page</h1>
+    <p>This page tests the highlightSelectedTopic method implementation.</p>
+
+    <!-- Test 1: Basic highlight functionality -->
+    <div class="test-container">
+        <div class="test-title">Test 1: Basic Highlight Functionality</div>
+        <div class="test-description">
+            Click the button to highlight a topic. The segment should have the "wheel-segment--selected" class,
+            the topic name should appear in the overlay, and the highlight should persist for 2 seconds.
+        </div>
+        <div class="controls">
+            <button id="test1-btn">Highlight "Science & Technology"</button>
+        </div>
+        <div id="wheel-container-1"></div>
+        <div class="test-result" id="result-1"></div>
+    </div>
+
+    <!-- Test 2: Custom duration -->
+    <div class="test-container">
+        <div class="test-title">Test 2: Custom Duration (5 seconds)</div>
+        <div class="test-description">
+            Click the button to highlight a topic for 5 seconds instead of the default 2 seconds.
+        </div>
+        <div class="controls">
+            <button id="test2-btn">Highlight "World History" (5s)</button>
+        </div>
+        <div id="wheel-container-2"></div>
+        <div class="test-result" id="result-2"></div>
+    </div>
+
+    <!-- Test 3: Multiple highlights -->
+    <div class="test-container">
+        <div class="test-title">Test 3: Multiple Highlights (Interrupt Previous)</div>
+        <div class="test-description">
+            Click the buttons to highlight different topics. The previous highlight should be cleared
+            when a new one is triggered.
+        </div>
+        <div class="controls">
+            <button id="test3-btn1">Highlight "Geography"</button>
+            <button id="test3-btn2">Highlight "Literature & Arts"</button>
+            <button id="test3-btn3">Highlight "Sports & Games"</button>
+        </div>
+        <div id="wheel-container-3"></div>
+        <div class="test-result" id="result-3"></div>
+    </div>
+
+    <!-- Test 4: Highlight with used topics -->
+    <div class="test-container">
+        <div class="test-title">Test 4: Highlight with Used Topics</div>
+        <div class="test-description">
+            Test highlighting on a wheel that has some used topics. The highlight should work
+            on both used and available topics.
+        </div>
+        <div class="controls">
+            <button id="test4-btn1">Highlight "Music & Entertainment" (available)</button>
+            <button id="test4-btn2">Highlight "Science & Technology" (used)</button>
+        </div>
+        <div id="wheel-container-4"></div>
+        <div class="test-result" id="result-4"></div>
+    </div>
+
+    <!-- Test 5: Automatic verification -->
+    <div class="test-container">
+        <div class="test-title">Test 5: Automated Verification</div>
+        <div class="test-description">
+            This test automatically verifies the highlight functionality and timing.
+        </div>
+        <div class="controls">
+            <button id="test5-btn">Run Automated Test</button>
+        </div>
+        <div id="wheel-container-5"></div>
+        <div class="test-result" id="result-5"></div>
+    </div>
+
+    <script type="module">
+        import { SpinningWheel, TOPICS } from './js/wheel.js';
+
+        // Test 1: Basic highlight
+        const wheel1 = new SpinningWheel('test-room-1');
+        wheel1.renderWithUsedTopics(document.getElementById('wheel-container-1'), []);
+        
+        document.getElementById('test1-btn').addEventListener('click', () => {
+            wheel1.highlightSelectedTopic('Science & Technology');
+            document.getElementById('result-1').innerHTML = `
+                <div class="info">Highlight triggered. Check that:</div>
+                <ul>
+                    <li>The "Science & Technology" segment has a golden glow</li>
+                    <li>The topic name appears in the center overlay</li>
+                    <li>The highlight disappears after 2 seconds</li>
+                </ul>
+            `;
+        });
+
+        // Test 2: Custom duration
+        const wheel2 = new SpinningWheel('test-room-2');
+        wheel2.renderWithUsedTopics(document.getElementById('wheel-container-2'), []);
+        
+        document.getElementById('test2-btn').addEventListener('click', () => {
+            wheel2.highlightSelectedTopic('World History', 5000);
+            document.getElementById('result-2').innerHTML = `
+                <div class="info">Highlight triggered with 5-second duration.</div>
+                <ul>
+                    <li>The highlight should persist for 5 seconds</li>
+                    <li>Time it to verify the duration</li>
+                </ul>
+            `;
+        });
+
+        // Test 3: Multiple highlights
+        const wheel3 = new SpinningWheel('test-room-3');
+        wheel3.renderWithUsedTopics(document.getElementById('wheel-container-3'), []);
+        
+        document.getElementById('test3-btn1').addEventListener('click', () => {
+            wheel3.highlightSelectedTopic('Geography');
+            document.getElementById('result-3').innerHTML = `<div class="info">Highlighted "Geography"</div>`;
+        });
+        
+        document.getElementById('test3-btn2').addEventListener('click', () => {
+            wheel3.highlightSelectedTopic('Literature & Arts');
+            document.getElementById('result-3').innerHTML = `<div class="info">Highlighted "Literature & Arts" (previous should be cleared)</div>`;
+        });
+        
+        document.getElementById('test3-btn3').addEventListener('click', () => {
+            wheel3.highlightSelectedTopic('Sports & Games');
+            document.getElementById('result-3').innerHTML = `<div class="info">Highlighted "Sports & Games" (previous should be cleared)</div>`;
+        });
+
+        // Test 4: Highlight with used topics
+        const wheel4 = new SpinningWheel('test-room-4');
+        const usedTopics4 = ['Science & Technology', 'World History', 'Geography'];
+        wheel4.renderWithUsedTopics(document.getElementById('wheel-container-4'), usedTopics4);
+        
+        document.getElementById('test4-btn1').addEventListener('click', () => {
+            wheel4.highlightSelectedTopic('Music & Entertainment');
+            document.getElementById('result-4').innerHTML = `<div class="info">Highlighted "Music & Entertainment" (available topic)</div>`;
+        });
+        
+        document.getElementById('test4-btn2').addEventListener('click', () => {
+            wheel4.highlightSelectedTopic('Science & Technology');
+            document.getElementById('result-4').innerHTML = `<div class="info">Highlighted "Science & Technology" (used topic)</div>`;
+        });
+
+        // Test 5: Automated verification
+        const wheel5 = new SpinningWheel('test-room-5');
+        wheel5.renderWithUsedTopics(document.getElementById('wheel-container-5'), []);
+        
+        document.getElementById('test5-btn').addEventListener('click', async () => {
+            const resultDiv = document.getElementById('result-5');
+            const container = document.getElementById('wheel-container-5');
+            const results = [];
+            
+            resultDiv.innerHTML = '<div class="info">Running automated test...</div>';
+            
+            // Test: Highlight a topic
+            wheel5.highlightSelectedTopic('Nature & Animals', 3000);
+            
+            // Wait a moment for DOM to update
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // Check 1: Segment has selected class
+            const selectedSegment = container.querySelector('.wheel-segment--selected');
+            if (selectedSegment) {
+                const topicName = selectedSegment.getAttribute('data-topic');
+                if (topicName === 'Nature & Animals') {
+                    results.push('✓ Correct segment has wheel-segment--selected class');
+                } else {
+                    results.push(`✗ Wrong segment selected: ${topicName}`);
+                }
+            } else {
+                results.push('✗ No segment has wheel-segment--selected class');
+            }
+            
+            // Check 2: Overlay displays topic name
+            const overlay = container.querySelector('.wheel-topic-overlay');
+            if (overlay && overlay.textContent === 'Nature & Animals') {
+                results.push('✓ Overlay displays correct topic name');
+            } else {
+                results.push(`✗ Overlay text incorrect: "${overlay ? overlay.textContent : 'not found'}"`);
+            }
+            
+            // Check 3: Overlay is visible
+            if (overlay && overlay.style.display === 'block') {
+                results.push('✓ Overlay is visible');
+            } else {
+                results.push('✗ Overlay is not visible');
+            }
+            
+            // Check 4: Wait for highlight to expire (3 seconds + buffer)
+            results.push('⏳ Waiting 3.5 seconds for highlight to expire...');
+            resultDiv.innerHTML = `
+                <div class="info">Test in progress...</div>
+                <ul>
+                    ${results.map(r => `<li>${r}</li>`).join('')}
+                </ul>
+            `;
+            
+            await new Promise(resolve => setTimeout(resolve, 3500));
+            
+            // Check 5: Highlight removed after duration
+            const selectedAfter = container.querySelector('.wheel-segment--selected');
+            if (!selectedAfter) {
+                results.push('✓ Highlight removed after duration');
+            } else {
+                results.push('✗ Highlight still present after duration');
+            }
+            
+            // Check 6: Overlay hidden after duration
+            if (overlay && overlay.style.display === 'none') {
+                results.push('✓ Overlay hidden after duration');
+            } else {
+                results.push('✗ Overlay still visible after duration');
+            }
+            
+            // Check 7: Overlay text cleared
+            if (overlay && overlay.textContent === '') {
+                results.push('✓ Overlay text cleared');
+            } else {
+                results.push(`✗ Overlay text not cleared: "${overlay ? overlay.textContent : 'not found'}"`);
+            }
+            
+            const allPassed = results.filter(r => r.startsWith('✓')).length === 6;
+            resultDiv.innerHTML = `
+                <div class="${allPassed ? 'pass' : 'fail'}">
+                    ${allPassed ? 'ALL TESTS PASSED' : 'SOME TESTS FAILED'}
+                </div>
+                <ul>
+                    ${results.map(r => `<li>${r}</li>`).join('')}
+                </ul>
+            `;
+        });
+
+        console.log('Test page loaded. Click buttons to run tests.');
+    </script>
+</body>
+</html>

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Questions Data Test - Multiplayer Bidding Quiz</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px;
+            background-color: #fff;
+        }
+        h1 {
+            font-size: 32px;
+            margin-bottom: 32px;
+            text-align: center;
+        }
+        .test-result {
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 2px solid #000;
+        }
+        .test-result.pass {
+            background-color: #f0f0f0;
+        }
+        .test-result.fail {
+            background-color: #ffe0e0;
+        }
+        .question-card {
+            border: 2px solid #000;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        .question-card h3 {
+            margin-top: 0;
+            font-size: 18px;
+        }
+        .choices {
+            margin-top: 8px;
+            padding-left: 20px;
+        }
+        .correct {
+            font-weight: bold;
+            color: #000;
+        }
+        pre {
+            background-color: #f5f5f5;
+            padding: 16px;
+            overflow-x: auto;
+            border: 1px solid #000;
+        }
+    </style>
+</head>
+<body>
+    <h1>Questions Data Structure Test</h1>
+    
+    <div id="test-results"></div>
+    <div id="questions-display"></div>
+
+    <script type="module">
+        import { QUESTIONS, getQuestionByTopic, getAllTopics, validateQuestions } from './js/questions.js';
+
+        const testResults = document.getElementById('test-results');
+        const questionsDisplay = document.getElementById('questions-display');
+
+        // Test 1: Validate questions structure
+        const validationResult = validateQuestions();
+        testResults.innerHTML += `
+            <div class="test-result ${validationResult ? 'pass' : 'fail'}">
+                <strong>Test 1: Questions Structure Validation</strong><br>
+                Result: ${validationResult ? 'PASS ✓' : 'FAIL ✗'}<br>
+                ${validationResult ? 'All questions have valid structure' : 'Some questions have invalid structure'}
+            </div>
+        `;
+
+        // Test 2: Check number of topics
+        const topics = getAllTopics();
+        const topicCountTest = topics.length === 10;
+        testResults.innerHTML += `
+            <div class="test-result ${topicCountTest ? 'pass' : 'fail'}">
+                <strong>Test 2: Topic Count</strong><br>
+                Result: ${topicCountTest ? 'PASS ✓' : 'FAIL ✗'}<br>
+                Expected: 10 topics, Found: ${topics.length} topics
+            </div>
+        `;
+
+        // Test 3: Check each question has 4 choices
+        let allHaveFourChoices = true;
+        topics.forEach(topic => {
+            const question = getQuestionByTopic(topic);
+            if (question.choices.length !== 4) {
+                allHaveFourChoices = false;
+            }
+        });
+        testResults.innerHTML += `
+            <div class="test-result ${allHaveFourChoices ? 'pass' : 'fail'}">
+                <strong>Test 3: All Questions Have 4 Choices</strong><br>
+                Result: ${allHaveFourChoices ? 'PASS ✓' : 'FAIL ✗'}<br>
+                ${allHaveFourChoices ? 'All questions have exactly 4 choices' : 'Some questions do not have 4 choices'}
+            </div>
+        `;
+
+        // Test 4: Check correct answer indices are valid (0-3)
+        let allCorrectAnswersValid = true;
+        topics.forEach(topic => {
+            const question = getQuestionByTopic(topic);
+            if (question.correctAnswer < 0 || question.correctAnswer > 3) {
+                allCorrectAnswersValid = false;
+            }
+        });
+        testResults.innerHTML += `
+            <div class="test-result ${allCorrectAnswersValid ? 'pass' : 'fail'}">
+                <strong>Test 4: Correct Answer Indices Valid</strong><br>
+                Result: ${allCorrectAnswersValid ? 'PASS ✓' : 'FAIL ✗'}<br>
+                ${allCorrectAnswersValid ? 'All correct answer indices are between 0-3' : 'Some correct answer indices are invalid'}
+            </div>
+        `;
+
+        // Test 5: Test getQuestionByTopic function
+        const testTopic = "Science & Technology";
+        const testQuestion = getQuestionByTopic(testTopic);
+        const getQuestionTest = testQuestion !== null && testQuestion.topic === testTopic;
+        testResults.innerHTML += `
+            <div class="test-result ${getQuestionTest ? 'pass' : 'fail'}">
+                <strong>Test 5: getQuestionByTopic Function</strong><br>
+                Result: ${getQuestionTest ? 'PASS ✓' : 'FAIL ✗'}<br>
+                ${getQuestionTest ? `Successfully retrieved question for "${testTopic}"` : 'Failed to retrieve question'}
+            </div>
+        `;
+
+        // Display all questions
+        questionsDisplay.innerHTML = '<h2>All Questions</h2>';
+        topics.forEach((topic, index) => {
+            const question = getQuestionByTopic(topic);
+            const choicesHTML = question.choices.map((choice, i) => {
+                const letter = String.fromCharCode(65 + i); // A, B, C, D
+                const isCorrect = i === question.correctAnswer;
+                return `<li ${isCorrect ? 'class="correct"' : ''}>${letter}. ${choice} ${isCorrect ? '(Correct)' : ''}</li>`;
+            }).join('');
+
+            questionsDisplay.innerHTML += `
+                <div class="question-card">
+                    <h3>${index + 1}. ${topic}</h3>
+                    <p><strong>Question:</strong> ${question.question}</p>
+                    <p><strong>Choices:</strong></p>
+                    <ul class="choices">
+                        ${choicesHTML}
+                    </ul>
+                </div>
+            `;
+        });
+
+        // Display raw data structure
+        questionsDisplay.innerHTML += `
+            <h2>Raw Data Structure</h2>
+            <pre>${JSON.stringify(QUESTIONS, null, 2)}</pre>
+        `;
+    </script>
+</body>
+</html>

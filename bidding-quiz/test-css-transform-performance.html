@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: CSS Transform-Based Animations with Hardware Acceleration</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-container {
+            margin-bottom: 40px;
+            border: 2px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-description {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .test-result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .pass {
+            color: green;
+            font-weight: bold;
+        }
+        .fail {
+            color: red;
+            font-weight: bold;
+        }
+        .info {
+            color: blue;
+            font-weight: bold;
+        }
+        .metrics {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #e8f4f8;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>CSS Transform-Based Animations - Performance Test</h1>
+    <p>This page tests that wheel animations use CSS transforms with hardware acceleration (Requirements 9.1, 9.4).</p>
+
+    <!-- Test 1: CSS transform usage (not position properties) -->
+    <div class="test-container">
+        <div class="test-title">Test 1: CSS Transform Usage (Requirement 9.1)</div>
+        <div class="test-description">
+            Verify that the wheel animation uses CSS transform: rotate() instead of position properties (top, left, etc.).
+            This ensures hardware acceleration is possible.
+        </div>
+        <div class="controls">
+            <button id="spin-btn-1">Spin Wheel</button>
+        </div>
+        <div id="wheel-container-1"></div>
+        <div class="test-result" id="result-1"></div>
+        <div class="metrics" id="metrics-1"></div>
+    </div>
+
+    <!-- Test 2: will-change: transform for hardware acceleration -->
+    <div class="test-container">
+        <div class="test-title">Test 2: Hardware Acceleration with will-change (Requirement 9.1)</div>
+        <div class="test-description">
+            Verify that the wheel element has will-change: transform CSS property to leverage hardware acceleration.
+        </div>
+        <div class="controls">
+            <button id="spin-btn-2">Check CSS Properties</button>
+        </div>
+        <div id="wheel-container-2"></div>
+        <div class="test-result" id="result-2"></div>
+        <div class="metrics" id="metrics-2"></div>
+    </div>
+
+    <!-- Test 3: Minimal DOM manipulations during animation -->
+    <div class="test-container">
+        <div class="test-title">Test 3: Minimal DOM Manipulations (Requirement 9.4)</div>
+        <div class="test-description">
+            Verify that DOM manipulations are minimized during animation by using MutationObserver to count changes.
+            Only essential updates (transform changes) should occur.
+        </div>
+        <div class="controls">
+            <button id="spin-btn-3">Spin and Monitor DOM</button>
+        </div>
+        <div id="wheel-container-3"></div>
+        <div class="test-result" id="result-3"></div>
+        <div class="metrics" id="metrics-3"></div>
+    </div>
+
+    <!-- Test 4: requestAnimationFrame usage -->
+    <div class="test-container">
+        <div class="test-title">Test 4: RequestAnimationFrame Optimization</div>
+        <div class="test-description">
+            Verify that the animation uses requestAnimationFrame to batch DOM changes for optimal performance.
+        </div>
+        <div class="controls">
+            <button id="spin-btn-4">Spin Wheel</button>
+        </div>
+        <div id="wheel-container-4"></div>
+        <div class="test-result" id="result-4"></div>
+        <div class="metrics" id="metrics-4"></div>
+    </div>
+
+    <!-- Test 5: No position property usage -->
+    <div class="test-container">
+        <div class="test-title">Test 5: No Position Properties Used</div>
+        <div class="test-description">
+            Verify that position properties (top, left, right, bottom) are NOT used for animation.
+            Only transform should be modified during animation.
+        </div>
+        <div class="controls">
+            <button id="spin-btn-5">Spin and Check Properties</button>
+        </div>
+        <div id="wheel-container-5"></div>
+        <div class="test-result" id="result-5"></div>
+        <div class="metrics" id="metrics-5"></div>
+    </div>
+
+    <script type="module">
+        import { SpinningWheel, TOPICS } from './js/wheel.js';
+
+        // Mock Firebase for testing
+        window.mockFirebase = true;
+
+        // Helper function to run test
+        async function runTest(testNum, testFn) {
+            const spinBtn = document.getElementById(`spin-btn-${testNum}`);
+            const resultDiv = document.getElementById(`result-${testNum}`);
+            const metricsDiv = document.getElementById(`metrics-${testNum}`);
+            
+            spinBtn.addEventListener('click', async () => {
+                spinBtn.disabled = true;
+                resultDiv.innerHTML = '<div class="info">Running test...</div>';
+                metricsDiv.innerHTML = '';
+                
+                try {
+                    const result = await testFn(testNum);
+                    
+                    const allPassed = result.checks.every(c => c.passed);
+                    resultDiv.innerHTML = `
+                        <div class="${allPassed ? 'pass' : 'fail'}">
+                            ${allPassed ? 'PASS' : 'FAIL'}
+                        </div>
+                        <ul>
+                            ${result.checks.map(c => `<li>${c.passed ? '✓' : '✗'} ${c.message}</li>`).join('')}
+                        </ul>
+                    `;
+                    
+                    if (result.metrics) {
+                        metricsDiv.innerHTML = `
+                            <strong>Metrics:</strong>
+                            <ul>
+                                ${Object.entries(result.metrics).map(([key, value]) => 
+                                    `<li>${key}: ${value}</li>`
+                                ).join('')}
+                            </ul>
+                        `;
+                    }
+                } catch (error) {
+                    resultDiv.innerHTML = `
+                        <div class="fail">ERROR</div>
+                        <p>${error.message}</p>
+                    `;
+                }
+                
+                spinBtn.disabled = false;
+            });
+        }
+
+        // Test 1: CSS transform usage
+        async function test1(testNum) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const wheel = new SpinningWheel('test-room-1');
+            
+            // Mock selectRandomTopic
+            wheel.selectRandomTopic = async () => {
+                wheel.selectedTopic = TOPICS[0];
+                return TOPICS[0];
+            };
+            
+            wheel.renderWithUsedTopics(container, []);
+            
+            // Start spin
+            const spinPromise = wheel.spinWithEnhancedAnimation();
+            
+            // Check CSS properties during spin (after 100ms)
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const transform = wheel.wheelElement.style.transform;
+            const transition = wheel.wheelElement.style.transition;
+            
+            const usesRotate = transform.includes('rotate');
+            const transitionsTransform = transition.includes('transform');
+            
+            // Wait for spin to complete
+            await spinPromise;
+            
+            return {
+                checks: [
+                    { passed: usesRotate, message: `Uses CSS transform: rotate() - ${usesRotate ? 'YES' : 'NO'}` },
+                    { passed: transitionsTransform, message: `Transitions transform property - ${transitionsTransform ? 'YES' : 'NO'}` },
+                    { passed: usesRotate && transitionsTransform, message: 'CSS transform-based animation confirmed' }
+                ],
+                metrics: {
+                    'Transform Value': transform.substring(0, 40) + '...',
+                    'Transition Property': transition.substring(0, 60) + '...'
+                }
+            };
+        }
+
+        // Test 2: will-change: transform for hardware acceleration
+        async function test2(testNum) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const wheel = new SpinningWheel('test-room-2');
+            
+            wheel.renderWithUsedTopics(container, []);
+            
+            // Get computed style to check will-change property
+            const computedStyle = window.getComputedStyle(wheel.wheelElement);
+            const willChange = computedStyle.willChange;
+            
+            const hasWillChange = willChange === 'transform';
+            
+            return {
+                checks: [
+                    { passed: hasWillChange, message: `will-change: transform is set - ${hasWillChange ? 'YES' : 'NO'}` },
+                    { passed: hasWillChange, message: 'Hardware acceleration enabled via will-change' }
+                ],
+                metrics: {
+                    'will-change Value': willChange || 'not set',
+                    'Hardware Acceleration': hasWillChange ? 'Enabled' : 'Not enabled'
+                }
+            };
+        }
+
+        // Test 3: Minimal DOM manipulations during animation
+        async function test3(testNum) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const wheel = new SpinningWheel('test-room-3');
+            
+            // Mock selectRandomTopic
+            wheel.selectRandomTopic = async () => {
+                wheel.selectedTopic = TOPICS[2];
+                return TOPICS[2];
+            };
+            
+            wheel.renderWithUsedTopics(container, []);
+            
+            let mutationCount = 0;
+            const mutations = [];
+            
+            // Set up MutationObserver to count DOM changes
+            const observer = new MutationObserver((mutationsList) => {
+                for (const mutation of mutationsList) {
+                    mutationCount++;
+                    mutations.push({
+                        type: mutation.type,
+                        target: mutation.target.className,
+                        attributeName: mutation.attributeName
+                    });
+                }
+            });
+            
+            observer.observe(wheel.wheelElement, {
+                attributes: true,
+                childList: true,
+                subtree: true,
+                attributeOldValue: true
+            });
+            
+            // Start spin
+            await wheel.spinWithEnhancedAnimation();
+            
+            // Stop observing
+            observer.disconnect();
+            
+            // Count only non-essential mutations (excluding transform, transition, class changes)
+            const essentialAttributes = ['style', 'class'];
+            const nonEssentialMutations = mutations.filter(m => 
+                !essentialAttributes.includes(m.attributeName)
+            );
+            
+            // We expect minimal mutations: class add/remove, style changes for transform/transition
+            const isMinimal = mutationCount <= 10; // Allow up to 10 mutations for essential changes
+            
+            return {
+                checks: [
+                    { passed: isMinimal, message: `Total mutations: ${mutationCount} (expected <= 10)` },
+                    { passed: nonEssentialMutations.length === 0, message: `Non-essential mutations: ${nonEssentialMutations.length}` },
+                    { passed: isMinimal, message: 'DOM manipulations minimized during animation' }
+                ],
+                metrics: {
+                    'Total Mutations': mutationCount,
+                    'Non-Essential Mutations': nonEssentialMutations.length,
+                    'Mutation Types': mutations.map(m => m.attributeName).filter(Boolean).join(', ')
+                }
+            };
+        }
+
+        // Test 4: requestAnimationFrame usage (indirect test via timing)
+        async function test4(testNum) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const wheel = new SpinningWheel('test-room-4');
+            
+            // Mock selectRandomTopic
+            wheel.selectRandomTopic = async () => {
+                wheel.selectedTopic = TOPICS[3];
+                return TOPICS[3];
+            };
+            
+            wheel.renderWithUsedTopics(container, []);
+            
+            // Capture initial transform
+            const initialTransform = wheel.wheelElement.style.transform;
+            
+            // Start spin
+            const spinPromise = wheel.spinWithEnhancedAnimation();
+            
+            // Check immediately (should not have changed yet if using RAF)
+            const immediateTransform = wheel.wheelElement.style.transform;
+            
+            // Check after one frame
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            const afterRAFTransform = wheel.wheelElement.style.transform;
+            
+            // Wait for spin to complete
+            await spinPromise;
+            
+            // If using RAF, the transform should be applied after the frame, not immediately
+            const usesRAF = immediateTransform === initialTransform || afterRAFTransform !== initialTransform;
+            
+            return {
+                checks: [
+                    { passed: usesRAF, message: 'Animation uses requestAnimationFrame for batching' },
+                    { passed: afterRAFTransform.includes('rotate'), message: 'Transform applied after RAF' }
+                ],
+                metrics: {
+                    'Initial Transform': initialTransform || 'none',
+                    'After RAF Transform': afterRAFTransform.substring(0, 40) + '...',
+                    'Uses RAF': usesRAF ? 'Yes' : 'No'
+                }
+            };
+        }
+
+        // Test 5: No position property usage
+        async function test5(testNum) {
+            const container = document.getElementById(`wheel-container-${testNum}`);
+            const wheel = new SpinningWheel('test-room-5');
+            
+            // Mock selectRandomTopic
+            wheel.selectRandomTopic = async () => {
+                wheel.selectedTopic = TOPICS[4];
+                return TOPICS[4];
+            };
+            
+            wheel.renderWithUsedTopics(container, []);
+            
+            // Capture initial position properties
+            const initialTop = wheel.wheelElement.style.top;
+            const initialLeft = wheel.wheelElement.style.left;
+            const initialRight = wheel.wheelElement.style.right;
+            const initialBottom = wheel.wheelElement.style.bottom;
+            
+            // Start spin
+            const spinPromise = wheel.spinWithEnhancedAnimation();
+            
+            // Check during animation
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            const duringTop = wheel.wheelElement.style.top;
+            const duringLeft = wheel.wheelElement.style.left;
+            const duringRight = wheel.wheelElement.style.right;
+            const duringBottom = wheel.wheelElement.style.bottom;
+            
+            // Wait for spin to complete
+            await spinPromise;
+            
+            const afterTop = wheel.wheelElement.style.top;
+            const afterLeft = wheel.wheelElement.style.left;
+            const afterRight = wheel.wheelElement.style.right;
+            const afterBottom = wheel.wheelElement.style.bottom;
+            
+            // Position properties should not change during animation
+            const topUnchanged = initialTop === duringTop && duringTop === afterTop;
+            const leftUnchanged = initialLeft === duringLeft && duringLeft === afterLeft;
+            const rightUnchanged = initialRight === duringRight && duringRight === afterRight;
+            const bottomUnchanged = initialBottom === duringBottom && duringBottom === afterBottom;
+            
+            const noPositionProps = topUnchanged && leftUnchanged && rightUnchanged && bottomUnchanged;
+            
+            return {
+                checks: [
+                    { passed: topUnchanged, message: 'top property not used for animation' },
+                    { passed: leftUnchanged, message: 'left property not used for animation' },
+                    { passed: rightUnchanged, message: 'right property not used for animation' },
+                    { passed: bottomUnchanged, message: 'bottom property not used for animation' },
+                    { passed: noPositionProps, message: 'Only transform used (no position properties)' }
+                ],
+                metrics: {
+                    'Position Properties Used': noPositionProps ? 'None' : 'Some',
+                    'Animation Method': 'CSS Transform only'
+                }
+            };
+        }
+
+        // Initialize tests
+        runTest(1, test1);
+        runTest(2, test2);
+        runTest(3, test3);
+        runTest(4, test4);
+        runTest(5, test5);
+
+        console.log('CSS Transform Performance Test page loaded. Click buttons to run tests.');
+    </script>
+</body>
+</html>

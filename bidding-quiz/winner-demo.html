@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Winner Screen Demo - Multiplayer Bidding Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="error-container"></div>
+    
+    <div id="main-content">
+        <div id="game-content">
+            <!-- Winner screen will be rendered here -->
+        </div>
+    </div>
+
+    <script type="module">
+        import { UIManager } from './js/ui.js';
+
+        // Initialize UI Manager
+        const uiManager = new UIManager('demo-room');
+        uiManager.currentPlayerId = 'player-2'; // Set current player for highlighting
+
+        // Mock winner data
+        const winner = {
+            playerId: 'player-1',
+            name: 'Alice',
+            score: 12500
+        };
+
+        // Mock final rankings
+        const rankings = [
+            { playerId: 'player-1', name: 'Alice', score: 12500, rank: 1 },
+            { playerId: 'player-2', name: 'You', score: 9800, rank: 2 },
+            { playerId: 'player-3', name: 'Bob', score: 8200, rank: 3 },
+            { playerId: 'player-4', name: 'Charlie', score: 7500, rank: 4 },
+            { playerId: 'player-5', name: 'Diana', score: 6100, rank: 5 },
+            { playerId: 'player-6', name: 'Eve', score: 5400, rank: 6 }
+        ];
+
+        // Test 1: Show winner screen as regular player (no admin)
+        console.log('Test 1: Winner screen as regular player');
+        uiManager.showWinnerScreen(winner, rankings, false);
+
+        // Test 2: Show winner screen as admin (with reset button)
+        setTimeout(() => {
+            console.log('Test 2: Winner screen as admin');
+            uiManager.showWinnerScreen(winner, rankings, true);
+        }, 5000);
+
+        // Test 3: Show winner screen where current player is the winner
+        setTimeout(() => {
+            console.log('Test 3: Current player is the winner');
+            uiManager.currentPlayerId = 'player-1';
+            const winnerRankings = [
+                { playerId: 'player-1', name: 'You', score: 12500, rank: 1 },
+                { playerId: 'player-2', name: 'Alice', score: 9800, rank: 2 },
+                { playerId: 'player-3', name: 'Bob', score: 8200, rank: 3 },
+                { playerId: 'player-4', name: 'Charlie', score: 7500, rank: 4 },
+                { playerId: 'player-5', name: 'Diana', score: 6100, rank: 5 }
+            ];
+            const currentPlayerWinner = {
+                playerId: 'player-1',
+                name: 'You',
+                score: 12500
+            };
+            uiManager.showWinnerScreen(currentPlayerWinner, winnerRankings, true);
+        }, 10000);
+
+        console.log('Winner screen demo loaded. Tests will run automatically.');
+        console.log('- Test 1: Regular player view (now)');
+        console.log('- Test 2: Admin view with reset button (5 seconds)');
+        console.log('- Test 3: Current player as winner (10 seconds)');
+    </script>
+</body>
+</html>

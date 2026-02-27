@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test ARIA Labels on Wheel Interactive Elements</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 900px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    
+    .test-container {
+      border: 2px solid #333;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    
+    .wheel-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      margin: 20px auto;
+    }
+    
+    .wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 5px solid #333;
+      position: relative;
+      background: #fff;
+    }
+    
+    .wheel-segment {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      top: 0;
+      left: 50%;
+      transform-origin: 0% 100%;
+      background: #4CAF50;
+      border: 1px solid #fff;
+    }
+    
+    .wheel-pointer {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 30px;
+      color: red;
+      z-index: 100;
+    }
+    
+    .wheel-status {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .wheel-aria-live {
+      position: absolute;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+    
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 5px;
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    
+    button:hover {
+      background: #45a049;
+    }
+    
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    
+    .test-result.pass {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .test-result.fail {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .summary {
+      margin-top: 20px;
+      padding: 15px;
+      background: #e7f3ff;
+      border: 2px solid #0066cc;
+      border-radius: 4px;
+      font-weight: bold;
+    }
+    
+    .admin-panel {
+      background: #f0f0f0;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      border: 2px solid #666;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test ARIA Labels on Wheel Interactive Elements</h1>
+  
+  <div class="test-container">
+    <h2>Test: Requirement 8.2 - ARIA Labels on Interactive Elements</h2>
+    <p>This test verifies that all interactive wheel elements have proper ARIA labels for screen reader accessibility.</p>
+    
+    <h3>Test Setup</h3>
+    <div id="wheel-container"></div>
+    
+    <div class="admin-panel">
+      <h4>Mock Admin Controls</h4>
+      <button id="admin-spin-wheel" type="button" aria-label="Spin the wheel to select a topic">Spin Wheel</button>
+    </div>
+    
+    <div style="text-align: center; margin: 20px 0;">
+      <button id="run-tests">Run All Tests</button>
+    </div>
+    
+    <div id="test-results"></div>
+    <div id="test-summary"></div>
+  </div>
+
+  <script type="module">
+    // Mock Firebase for testing
+    window.db = {};
+    
+    // Import the SpinningWheel class
+    import { SpinningWheel } from './js/wheel.js';
+    
+    // Create a wheel instance
+    const wheel = new SpinningWheel('test-room');
+    
+    // Render the wheel
+    const container = document.getElementById('wheel-container');
+    wheel.renderWithUsedTopics(container, []);
+    
+    // Test results container
+    const resultsContainer = document.getElementById('test-results');
+    const summaryContainer = document.getElementById('test-summary');
+    
+    let passCount = 0;
+    let failCount = 0;
+    
+    function addTestResult(testName, passed, message) {
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.innerHTML = `<strong>${testName}:</strong> ${passed ? '✓ PASS' : '✗ FAIL'} - ${message}`;
+      resultsContainer.appendChild(resultDiv);
+      
+      if (passed) {
+        passCount++;
+      } else {
+        failCount++;
+      }
+    }
+    
+    function showSummary() {
+      const total = passCount + failCount;
+      const summaryDiv = document.createElement('div');
+      summaryDiv.className = 'summary';
+      summaryDiv.innerHTML = `
+        <h3>Test Summary</h3>
+        <p>Total Tests: ${total}</p>
+        <p>Passed: ${passCount}</p>
+        <p>Failed: ${failCount}</p>
+        <p>Success Rate: ${total > 0 ? Math.round((passCount / total) * 100) : 0}%</p>
+      `;
+      summaryContainer.innerHTML = '';
+      summaryContainer.appendChild(summaryDiv);
+    }
+    
+    // Run all tests
+    document.getElementById('run-tests').addEventListener('click', () => {
+      // Clear previous results
+      resultsContainer.innerHTML = '';
+      summaryContainer.innerHTML = '';
+      passCount = 0;
+      failCount = 0;
+      
+      // Test 1: Wheel container has aria-label
+      const wheelElement = document.getElementById('spinning-wheel');
+      const wheelAriaLabel = wheelElement?.getAttribute('aria-label');
+      addTestResult(
+        'Test 1: Wheel container has aria-label',
+        wheelAriaLabel !== null && wheelAriaLabel !== '',
+        wheelAriaLabel 
+          ? `Found aria-label="${wheelAriaLabel}"` 
+          : 'No aria-label attribute found'
+      );
+      
+      // Test 2: Wheel container aria-label is descriptive
+      const isDescriptive = wheelAriaLabel && wheelAriaLabel.toLowerCase().includes('wheel');
+      addTestResult(
+        'Test 2: Wheel aria-label is descriptive',
+        isDescriptive,
+        isDescriptive 
+          ? `aria-label="${wheelAriaLabel}" is descriptive` 
+          : `aria-label="${wheelAriaLabel}" should describe the wheel`
+      );
+      
+      // Test 3: ARIA live region exists
+      const ariaLiveRegion = wheel.ariaLiveRegion;
+      addTestResult(
+        'Test 3: ARIA live region exists',
+        ariaLiveRegion !== null,
+        ariaLiveRegion ? 'ARIA live region found' : 'ARIA live region not found'
+      );
+      
+      // Test 4: ARIA live region has role="status"
+      const roleAttr = ariaLiveRegion?.getAttribute('role');
+      addTestResult(
+        'Test 4: ARIA live region has role="status"',
+        roleAttr === 'status',
+        roleAttr === 'status' 
+          ? 'Correct role attribute' 
+          : `Expected role="status", got role="${roleAttr}"`
+      );
+      
+      // Test 5: ARIA live region has aria-live="polite"
+      const ariaLiveAttr = ariaLiveRegion?.getAttribute('aria-live');
+      addTestResult(
+        'Test 5: ARIA live region has aria-live="polite"',
+        ariaLiveAttr === 'polite',
+        ariaLiveAttr === 'polite' 
+          ? 'Correct aria-live attribute' 
+          : `Expected aria-live="polite", got aria-live="${ariaLiveAttr}"`
+      );
+      
+      // Test 6: ARIA live region has aria-atomic="true"
+      const ariaAtomicAttr = ariaLiveRegion?.getAttribute('aria-atomic');
+      addTestResult(
+        'Test 6: ARIA live region has aria-atomic="true"',
+        ariaAtomicAttr === 'true',
+        ariaAtomicAttr === 'true' 
+          ? 'Correct aria-atomic attribute' 
+          : `Expected aria-atomic="true", got aria-atomic="${ariaAtomicAttr}"`
+      );
+      
+      // Test 7: Spin button has aria-label
+      const spinButton = document.getElementById('admin-spin-wheel');
+      const spinButtonAriaLabel = spinButton?.getAttribute('aria-label');
+      addTestResult(
+        'Test 7: Spin button has aria-label',
+        spinButtonAriaLabel !== null && spinButtonAriaLabel !== '',
+        spinButtonAriaLabel 
+          ? `Found aria-label="${spinButtonAriaLabel}"` 
+          : 'No aria-label attribute found on spin button'
+      );
+      
+      // Test 8: Spin button aria-label is descriptive
+      const isSpinDescriptive = spinButtonAriaLabel && 
+        (spinButtonAriaLabel.toLowerCase().includes('spin') || 
+         spinButtonAriaLabel.toLowerCase().includes('wheel'));
+      addTestResult(
+        'Test 8: Spin button aria-label is descriptive',
+        isSpinDescriptive,
+        isSpinDescriptive 
+          ? `aria-label="${spinButtonAriaLabel}" is descriptive` 
+          : `aria-label="${spinButtonAriaLabel}" should describe the spin action`
+      );
+      
+      // Test 9: ARIA live region is visually hidden but accessible
+      const ariaLiveStyles = window.getComputedStyle(ariaLiveRegion);
+      const isVisuallyHidden = 
+        ariaLiveStyles.position === 'absolute' && 
+        (parseInt(ariaLiveStyles.left) < -1000 || ariaLiveStyles.width === '1px');
+      addTestResult(
+        'Test 9: ARIA live region is visually hidden but accessible',
+        isVisuallyHidden,
+        isVisuallyHidden 
+          ? 'ARIA live region is properly hidden from visual display' 
+          : 'ARIA live region should be visually hidden but accessible to screen readers'
+      );
+      
+      // Test 10: All interactive elements are keyboard accessible
+      const wheelTabIndex = wheelElement?.getAttribute('tabindex');
+      const spinButtonTabIndex = spinButton?.getAttribute('tabindex');
+      const isKeyboardAccessible = 
+        (wheelTabIndex === null || parseInt(wheelTabIndex) >= 0) &&
+        (spinButtonTabIndex === null || parseInt(spinButtonTabIndex) >= 0);
+      addTestResult(
+        'Test 10: Interactive elements are keyboard accessible',
+        isKeyboardAccessible,
+        isKeyboardAccessible 
+          ? 'All elements are keyboard accessible' 
+          : 'Some elements may not be keyboard accessible (negative tabindex)'
+      );
+      
+      // Show summary
+      showSummary();
+    });
+    
+    // Auto-run tests on page load
+    setTimeout(() => {
+      document.getElementById('run-tests').click();
+    }, 500);
+  </script>
+</body>
+</html>

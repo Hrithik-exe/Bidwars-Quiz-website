@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase Indicator Demo - Multiplayer Bidding Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .demo-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+        
+        .demo-section {
+            margin-bottom: 48px;
+        }
+        
+        .demo-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        .demo-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+        
+        .demo-controls button {
+            padding: 8px 16px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div class="demo-container">
+            <h1 class="text-center">Phase Indicator Component Demo</h1>
+            
+            <div class="demo-section">
+                <h2 class="demo-title">Interactive Phase Indicator</h2>
+                <div class="demo-controls">
+                    <button onclick="updatePhase('waiting', 0)">Waiting</button>
+                    <button onclick="updatePhase('spinning', 1)">Spinning (Round 1)</button>
+                    <button onclick="updatePhase('bidding', 3)">Bidding (Round 3)</button>
+                    <button onclick="updatePhase('question', 5)">Question (Round 5)</button>
+                    <button onclick="updatePhase('results', 7)">Results (Round 7)</button>
+                    <button onclick="updatePhase('finished', 10)">Finished (Round 10)</button>
+                </div>
+                <div id="phase-indicator-container"></div>
+            </div>
+            
+            <div class="demo-section">
+                <h2 class="demo-title">All Phase States</h2>
+                
+                <h3 style="margin-top: 24px; margin-bottom: 8px;">Waiting Phase</h3>
+                <div class="phase-indicator phase-waiting">
+                    <div class="phase-header">
+                        <span class="round-number">Round 0/10</span>
+                        <span class="phase-name">WAITING</span>
+                    </div>
+                    <div class="phase-instruction">Waiting for game to start</div>
+                </div>
+                
+                <h3 style="margin-top: 24px; margin-bottom: 8px;">Spinning Phase</h3>
+                <div class="phase-indicator phase-spinning">
+                    <div class="phase-header">
+                        <span class="round-number">Round 1/10</span>
+                        <span class="phase-name">SPINNING</span>
+                    </div>
+                    <div class="phase-instruction">Selecting topic...</div>
+                </div>
+                
+                <h3 style="margin-top: 24px; margin-bottom: 8px;">Bidding Phase</h3>
+                <div class="phase-indicator phase-bidding">
+                    <div class="phase-header">
+                        <span class="round-number">Round 3/10</span>
+                        <span class="phase-name">BIDDING</span>
+                    </div>
+                    <div class="phase-instruction">Place your bid</div>
+                </div>
+                
+                <h3 style="margin-top: 24px; margin-bottom: 8px;">Question Phase</h3>
+                <div class="phase-indicator phase-question">
+                    <div class="phase-header">
+                        <span class="round-number">Round 5/10</span>
+                        <span class="phase-name">QUESTION</span>
+                    </div>
+                    <div class="phase-instruction">Answer the question</div>
+                </div>
+                
+                <h3 style="margin-top: 24px; margin-bottom: 8px;">Results Phase</h3>
+                <div class="phase-indicator phase-results">
+                    <div class="phase-header">
+                        <span class="round-number">Round 7/10</span>
+                        <span class="phase-name">RESULTS</span>
+                    </div>
+                    <div class="phase-instruction">Round results</div>
+                </div>
+                
+                <h3 style="margin-top: 24px; margin-bottom: 8px;">Finished Phase</h3>
+                <div class="phase-indicator phase-finished">
+                    <div class="phase-header">
+                        <span class="round-number">Round 10/10</span>
+                        <span class="phase-name">FINISHED</span>
+                    </div>
+                    <div class="phase-instruction">Game over</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { UIManager } from './js/ui.js';
+        
+        // Create UI manager instance
+        const uiManager = new UIManager('demo-room');
+        
+        // Make updatePhase function globally available
+        window.updatePhase = function(phase, round) {
+            uiManager.updatePhaseIndicator(phase, round);
+        };
+        
+        // Initialize with waiting phase
+        updatePhase('waiting', 0);
+        
+        console.log('Phase indicator demo loaded');
+    </script>
+</body>
+</html>

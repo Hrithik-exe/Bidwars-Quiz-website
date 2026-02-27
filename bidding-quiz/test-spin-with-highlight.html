@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: Spin with Highlight</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-container {
+            margin-bottom: 40px;
+            border: 2px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-description {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        .info {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e3f2fd;
+            border-radius: 4px;
+            color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Spin with Highlight - Integration Test</h1>
+    <p>This page demonstrates the integration of spinWithEnhancedAnimation and highlightSelectedTopic methods.</p>
+
+    <!-- Test: Complete spin with highlight -->
+    <div class="test-container">
+        <div class="test-title">Complete Spin with Highlight</div>
+        <div class="test-description">
+            Click the button to spin the wheel. After the animation completes, the selected topic
+            will be highlighted for 2 seconds with the topic name displayed in the center.
+        </div>
+        <div class="controls">
+            <button id="spin-btn">Spin Wheel</button>
+        </div>
+        <div id="wheel-container"></div>
+        <div class="info" id="status">Ready to spin</div>
+    </div>
+
+    <script type="module">
+        import { SpinningWheel, TOPICS } from './js/wheel.js';
+
+        // Create wheel instance
+        const wheel = new SpinningWheel('test-room');
+        
+        // Render wheel with some used topics for visual variety
+        const usedTopics = ['Science & Technology', 'World History'];
+        wheel.renderWithUsedTopics(document.getElementById('wheel-container'), usedTopics);
+        
+        const spinBtn = document.getElementById('spin-btn');
+        const statusDiv = document.getElementById('status');
+        
+        spinBtn.addEventListener('click', async () => {
+            // Disable button during spin
+            spinBtn.disabled = true;
+            statusDiv.textContent = 'Spinning...';
+            
+            try {
+                // Spin the wheel with enhanced animation
+                const selectedTopic = await wheel.spinWithEnhancedAnimation();
+                
+                if (selectedTopic) {
+                    statusDiv.textContent = `Wheel stopped on: ${selectedTopic}`;
+                    
+                    // Highlight the selected topic for 2 seconds
+                    wheel.highlightSelectedTopic(selectedTopic, 2000);
+                    
+                    // Wait for highlight to complete before allowing another spin
+                    setTimeout(() => {
+                        spinBtn.disabled = false;
+                        statusDiv.textContent = 'Ready to spin again';
+                    }, 2500);
+                } else {
+                    statusDiv.textContent = 'Error: No topic selected';
+                    spinBtn.disabled = false;
+                }
+            } catch (error) {
+                console.error('Spin error:', error);
+                statusDiv.textContent = `Error: ${error.message}`;
+                spinBtn.disabled = false;
+            }
+        });
+        
+        console.log('Integration test loaded. Click "Spin Wheel" to test.');
+    </script>
+</body>
+</html>

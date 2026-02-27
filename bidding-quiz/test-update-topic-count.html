@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test: updateTopicCountDisplay Method</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-container {
+            margin-bottom: 40px;
+            border: 2px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .test-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .test-description {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            margin-right: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .test-result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+        }
+        .pass {
+            color: green;
+            font-weight: bold;
+        }
+        .fail {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>updateTopicCountDisplay Method - Test Page</h1>
+    <p>This page tests the updateTopicCountDisplay method to ensure it updates the count without re-rendering the wheel.</p>
+
+    <!-- Test 1: Dynamic update from 10 to 7 topics -->
+    <div class="test-container">
+        <div class="test-title">Test 1: Dynamic Update (10 → 7 topics)</div>
+        <div class="test-description">
+            Start with 10 topics, then dynamically update to 7 topics using updateTopicCountDisplay.
+            The wheel should NOT re-render, only the status text should change.
+        </div>
+        <div id="wheel-container-1"></div>
+        <div class="controls">
+            <button id="update-btn-1">Update to 7 topics</button>
+        </div>
+        <div class="test-result" id="result-1"></div>
+    </div>
+
+    <!-- Test 2: Dynamic update to 1 topic (singular) -->
+    <div class="test-container">
+        <div class="test-title">Test 2: Dynamic Update to 1 Topic (Singular)</div>
+        <div class="test-description">
+            Start with 5 topics, then dynamically update to 1 topic.
+            Status should show "1 topic remaining" (singular).
+        </div>
+        <div id="wheel-container-2"></div>
+        <div class="controls">
+            <button id="update-btn-2">Update to 1 topic</button>
+        </div>
+        <div class="test-result" id="result-2"></div>
+    </div>
+
+    <!-- Test 3: Dynamic update to 0 topics -->
+    <div class="test-container">
+        <div class="test-title">Test 3: Dynamic Update to 0 Topics</div>
+        <div class="test-description">
+            Start with 2 topics, then dynamically update to 0 topics.
+            Status should show "No topics available".
+        </div>
+        <div id="wheel-container-3"></div>
+        <div class="controls">
+            <button id="update-btn-3">Update to 0 topics</button>
+        </div>
+        <div class="test-result" id="result-3"></div>
+    </div>
+
+    <!-- Test 4: Multiple sequential updates -->
+    <div class="test-container">
+        <div class="test-title">Test 4: Multiple Sequential Updates</div>
+        <div class="test-description">
+            Start with 10 topics, then update multiple times: 10 → 5 → 2 → 0.
+            Each update should only change the status text without re-rendering.
+        </div>
+        <div id="wheel-container-4"></div>
+        <div class="controls">
+            <button id="update-btn-4a">Update to 5 topics</button>
+            <button id="update-btn-4b">Update to 2 topics</button>
+            <button id="update-btn-4c">Update to 0 topics</button>
+        </div>
+        <div class="test-result" id="result-4"></div>
+    </div>
+
+    <script type="module">
+        import { SpinningWheel, TOPICS } from './js/wheel.js';
+
+        // Helper function to verify status text
+        function verifyStatusText(container, expectedText) {
+            const statusElement = container.querySelector('.wheel-status');
+            return statusElement && statusElement.textContent === expectedText;
+        }
+
+        // Helper function to check if wheel was re-rendered
+        function checkNoRerender(container, originalElement) {
+            const currentElement = container.querySelector('.wheel');
+            return currentElement === originalElement;
+        }
+
+        // Test 1: Update from 10 to 7 topics
+        const wheel1 = new SpinningWheel('test-room-1');
+        wheel1.renderWithUsedTopics(document.getElementById('wheel-container-1'), []);
+        const originalWheel1 = document.querySelector('#wheel-container-1 .wheel');
+        
+        document.getElementById('update-btn-1').addEventListener('click', () => {
+            // Simulate adding 3 used topics
+            wheel1.usedTopics = new Set([TOPICS[0], TOPICS[1], TOPICS[2]]);
+            wheel1.updateTopicCountDisplay();
+            
+            const statusCorrect = verifyStatusText(document.getElementById('wheel-container-1'), '7 topics remaining');
+            const noRerender = checkNoRerender(document.getElementById('wheel-container-1'), originalWheel1);
+            
+            document.getElementById('result-1').innerHTML = `
+                <div class="${statusCorrect && noRerender ? 'pass' : 'fail'}">
+                    ${statusCorrect && noRerender ? 'PASS' : 'FAIL'}
+                </div>
+                <ul>
+                    <li>${statusCorrect ? '✓' : '✗'} Status text: "${document.querySelector('#wheel-container-1 .wheel-status').textContent}"</li>
+                    <li>${noRerender ? '✓' : '✗'} Wheel not re-rendered (DOM element unchanged)</li>
+                </ul>
+            `;
+        });
+
+        // Test 2: Update to 1 topic (singular)
+        const wheel2 = new SpinningWheel('test-room-2');
+        wheel2.renderWithUsedTopics(document.getElementById('wheel-container-2'), TOPICS.slice(0, 5));
+        const originalWheel2 = document.querySelector('#wheel-container-2 .wheel');
+        
+        document.getElementById('update-btn-2').addEventListener('click', () => {
+            // Simulate adding more used topics (9 total)
+            wheel2.usedTopics = new Set(TOPICS.slice(0, 9));
+            wheel2.updateTopicCountDisplay();
+            
+            const statusCorrect = verifyStatusText(document.getElementById('wheel-container-2'), '1 topic remaining');
+            const noRerender = checkNoRerender(document.getElementById('wheel-container-2'), originalWheel2);
+            
+            document.getElementById('result-2').innerHTML = `
+                <div class="${statusCorrect && noRerender ? 'pass' : 'fail'}">
+                    ${statusCorrect && noRerender ? 'PASS' : 'FAIL'}
+                </div>
+                <ul>
+                    <li>${statusCorrect ? '✓' : '✗'} Status text: "${document.querySelector('#wheel-container-2 .wheel-status').textContent}"</li>
+                    <li>${noRerender ? '✓' : '✗'} Wheel not re-rendered (DOM element unchanged)</li>
+                </ul>
+            `;
+        });
+
+        // Test 3: Update to 0 topics
+        const wheel3 = new SpinningWheel('test-room-3');
+        wheel3.renderWithUsedTopics(document.getElementById('wheel-container-3'), TOPICS.slice(0, 8));
+        const originalWheel3 = document.querySelector('#wheel-container-3 .wheel');
+        
+        document.getElementById('update-btn-3').addEventListener('click', () => {
+            // Simulate all topics used
+            wheel3.usedTopics = new Set(TOPICS);
+            wheel3.updateTopicCountDisplay();
+            
+            const statusCorrect = verifyStatusText(document.getElementById('wheel-container-3'), 'No topics available');
+            const noRerender = checkNoRerender(document.getElementById('wheel-container-3'), originalWheel3);
+            
+            document.getElementById('result-3').innerHTML = `
+                <div class="${statusCorrect && noRerender ? 'pass' : 'fail'}">
+                    ${statusCorrect && noRerender ? 'PASS' : 'FAIL'}
+                </div>
+                <ul>
+                    <li>${statusCorrect ? '✓' : '✗'} Status text: "${document.querySelector('#wheel-container-3 .wheel-status').textContent}"</li>
+                    <li>${noRerender ? '✓' : '✗'} Wheel not re-rendered (DOM element unchanged)</li>
+                </ul>
+            `;
+        });
+
+        // Test 4: Multiple sequential updates
+        const wheel4 = new SpinningWheel('test-room-4');
+        wheel4.renderWithUsedTopics(document.getElementById('wheel-container-4'), []);
+        const originalWheel4 = document.querySelector('#wheel-container-4 .wheel');
+        let test4Results = [];
+        
+        document.getElementById('update-btn-4a').addEventListener('click', () => {
+            wheel4.usedTopics = new Set(TOPICS.slice(0, 5));
+            wheel4.updateTopicCountDisplay();
+            const statusCorrect = verifyStatusText(document.getElementById('wheel-container-4'), '5 topics remaining');
+            test4Results.push(`Update 1 (10→5): ${statusCorrect ? '✓' : '✗'} "${document.querySelector('#wheel-container-4 .wheel-status').textContent}"`);
+            updateTest4Results();
+        });
+        
+        document.getElementById('update-btn-4b').addEventListener('click', () => {
+            wheel4.usedTopics = new Set(TOPICS.slice(0, 8));
+            wheel4.updateTopicCountDisplay();
+            const statusCorrect = verifyStatusText(document.getElementById('wheel-container-4'), '2 topics remaining');
+            test4Results.push(`Update 2 (5→2): ${statusCorrect ? '✓' : '✗'} "${document.querySelector('#wheel-container-4 .wheel-status').textContent}"`);
+            updateTest4Results();
+        });
+        
+        document.getElementById('update-btn-4c').addEventListener('click', () => {
+            wheel4.usedTopics = new Set(TOPICS);
+            wheel4.updateTopicCountDisplay();
+            const statusCorrect = verifyStatusText(document.getElementById('wheel-container-4'), 'No topics available');
+            test4Results.push(`Update 3 (2→0): ${statusCorrect ? '✓' : '✗'} "${document.querySelector('#wheel-container-4 .wheel-status').textContent}"`);
+            updateTest4Results();
+        });
+        
+        function updateTest4Results() {
+            const noRerender = checkNoRerender(document.getElementById('wheel-container-4'), originalWheel4);
+            const allPassed = test4Results.every(r => r.includes('✓')) && noRerender;
+            
+            document.getElementById('result-4').innerHTML = `
+                <div class="${allPassed ? 'pass' : 'fail'}">
+                    ${allPassed ? 'PASS' : 'FAIL'}
+                </div>
+                <ul>
+                    ${test4Results.map(r => `<li>${r}</li>`).join('')}
+                    <li>${noRerender ? '✓' : '✗'} Wheel not re-rendered through all updates</li>
+                </ul>
+            `;
+        }
+
+        console.log('All tests ready. Click buttons to execute tests.');
+    </script>
+</body>
+</html>

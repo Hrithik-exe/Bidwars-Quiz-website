@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test announceToScreenReader Method</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+    
+    .test-container {
+      border: 2px solid #333;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+    }
+    
+    .wheel-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      margin: 20px auto;
+    }
+    
+    .wheel {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 5px solid #333;
+      position: relative;
+      background: #fff;
+    }
+    
+    .wheel-segment {
+      position: absolute;
+      width: 50%;
+      height: 50%;
+      top: 0;
+      left: 50%;
+      transform-origin: 0% 100%;
+      background: #4CAF50;
+      border: 1px solid #fff;
+    }
+    
+    .wheel-segment--used {
+      opacity: 0.4;
+      filter: grayscale(60%);
+    }
+    
+    .wheel-segment--available {
+      opacity: 1.0;
+    }
+    
+    .wheel-segment--selected {
+      box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+      transform: scale(1.05);
+      z-index: 10;
+    }
+    
+    .wheel--spinning {
+      pointer-events: none;
+    }
+    
+    .wheel-pointer {
+      position: absolute;
+      top: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 30px;
+      color: red;
+      z-index: 100;
+    }
+    
+    .wheel-status {
+      text-align: center;
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+    }
+    
+    .wheel-aria-live {
+      position: absolute;
+      left: -10000px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+    
+    .wheel-topic-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2rem;
+      font-weight: bold;
+      color: #fff;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      display: none;
+      z-index: 20;
+    }
+    
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin: 5px;
+      cursor: pointer;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    
+    button:hover {
+      background: #45a049;
+    }
+    
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      border-radius: 4px;
+    }
+    
+    .test-result.pass {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .test-result.fail {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .aria-monitor {
+      background: #f0f0f0;
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 4px;
+      border: 2px solid #666;
+    }
+    
+    .aria-monitor h3 {
+      margin-top: 0;
+    }
+    
+    #aria-content {
+      font-weight: bold;
+      color: #0066cc;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test announceToScreenReader Method</h1>
+  
+  <div class="test-container">
+    <h2>Test Setup</h2>
+    <p>This test verifies that the <code>announceToScreenReader</code> method correctly updates the ARIA live region.</p>
+    
+    <div class="aria-monitor">
+      <h3>ARIA Live Region Monitor</h3>
+      <p>Current announcement:</p>
+      <div id="aria-content">(No announcement yet)</div>
+    </div>
+    
+    <div id="wheel-container"></div>
+    
+    <div style="text-align: center;">
+      <button id="test-selecting">Test "Selecting topic" Announcement</button>
+      <button id="test-selected">Test "Selected topic" Announcement</button>
+      <button id="test-spin">Test Full Spin with Announcements</button>
+    </div>
+    
+    <div id="test-results"></div>
+  </div>
+
+  <script type="module">
+    // Mock Firebase for testing
+    window.db = {};
+    
+    // Import the SpinningWheel class
+    import { SpinningWheel, TOPICS } from './js/wheel.js';
+    
+    // Create a wheel instance
+    const wheel = new SpinningWheel('test-room');
+    
+    // Render the wheel
+    const container = document.getElementById('wheel-container');
+    wheel.renderWithUsedTopics(container, []);
+    
+    // Monitor ARIA live region changes
+    const ariaMonitor = document.getElementById('aria-content');
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' || mutation.type === 'characterData') {
+          const content = wheel.ariaLiveRegion.textContent;
+          ariaMonitor.textContent = content || '(Empty)';
+        }
+      });
+    });
+    
+    if (wheel.ariaLiveRegion) {
+      observer.observe(wheel.ariaLiveRegion, {
+        childList: true,
+        characterData: true,
+        subtree: true
+      });
+    }
+    
+    // Test results container
+    const resultsContainer = document.getElementById('test-results');
+    
+    function addTestResult(testName, passed, message) {
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `test-result ${passed ? 'pass' : 'fail'}`;
+      resultDiv.innerHTML = `<strong>${testName}:</strong> ${passed ? '✓ PASS' : '✗ FAIL'} - ${message}`;
+      resultsContainer.appendChild(resultDiv);
+    }
+    
+    // Test 1: Announce "Selecting topic"
+    document.getElementById('test-selecting').addEventListener('click', () => {
+      wheel.announceToScreenReader('Selecting topic');
+      
+      setTimeout(() => {
+        const content = wheel.ariaLiveRegion.textContent;
+        const passed = content === 'Selecting topic';
+        addTestResult(
+          'Test 1: Selecting topic announcement',
+          passed,
+          passed ? 'ARIA live region correctly updated' : `Expected "Selecting topic", got "${content}"`
+        );
+      }, 100);
+    });
+    
+    // Test 2: Announce selected topic
+    document.getElementById('test-selected').addEventListener('click', () => {
+      const testTopic = TOPICS[0];
+      wheel.announceToScreenReader(`Selected topic: ${testTopic}`);
+      
+      setTimeout(() => {
+        const content = wheel.ariaLiveRegion.textContent;
+        const expected = `Selected topic: ${testTopic}`;
+        const passed = content === expected;
+        addTestResult(
+          'Test 2: Selected topic announcement',
+          passed,
+          passed ? 'ARIA live region correctly updated' : `Expected "${expected}", got "${content}"`
+        );
+      }, 100);
+    });
+    
+    // Test 3: Full spin with announcements (mock version)
+    document.getElementById('test-spin').addEventListener('click', async () => {
+      // Clear previous results
+      resultsContainer.innerHTML = '';
+      
+      // Mock the selectRandomTopic method to avoid Firebase calls
+      const originalSelectRandomTopic = wheel.selectRandomTopic;
+      wheel.selectRandomTopic = async () => {
+        wheel.selectedTopic = TOPICS[0];
+        return TOPICS[0];
+      };
+      
+      // Track announcements
+      const announcements = [];
+      const originalAnnounce = wheel.announceToScreenReader.bind(wheel);
+      wheel.announceToScreenReader = (message) => {
+        announcements.push(message);
+        originalAnnounce(message);
+      };
+      
+      // Trigger spin
+      wheel.isSpinning = false; // Reset state
+      const result = await wheel.spinWithEnhancedAnimation();
+      
+      // Verify announcements
+      const hasSelectingAnnouncement = announcements.some(a => a === 'Selecting topic');
+      const hasSelectedAnnouncement = announcements.some(a => a.startsWith('Selected topic:'));
+      
+      addTestResult(
+        'Test 3a: "Selecting topic" announced at spin start',
+        hasSelectingAnnouncement,
+        hasSelectingAnnouncement ? 'Announcement made' : 'No announcement found'
+      );
+      
+      addTestResult(
+        'Test 3b: Selected topic announced at spin end',
+        hasSelectedAnnouncement,
+        hasSelectedAnnouncement ? 'Announcement made' : 'No announcement found'
+      );
+      
+      addTestResult(
+        'Test 3c: Announcements in correct order',
+        announcements[0] === 'Selecting topic' && announcements[1]?.startsWith('Selected topic:'),
+        announcements[0] === 'Selecting topic' && announcements[1]?.startsWith('Selected topic:') 
+          ? 'Correct order' 
+          : `Order: ${announcements.join(', ')}`
+      );
+      
+      // Restore original methods
+      wheel.selectRandomTopic = originalSelectRandomTopic;
+      wheel.announceToScreenReader = originalAnnounce;
+    });
+  </script>
+</body>
+</html>

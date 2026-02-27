@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results Screen Demo - Multiplayer Bidding Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="error-container"></div>
+    
+    <div id="main-content">
+        <div id="phase-indicator-container"></div>
+        
+        <div id="game-content">
+            <!-- Results screen will be rendered here -->
+        </div>
+        
+        <div id="leaderboard-container"></div>
+    </div>
+
+    <script type="module">
+        import { UIManager } from './js/ui.js';
+
+        // Initialize UI Manager
+        const uiManager = new UIManager('demo-room');
+        
+        // Set a mock player ID
+        uiManager.currentPlayerId = 'player1';
+
+        // Mock data for results screen
+        const mockPlayers = [
+            { id: 'player1', name: 'Alice', score: 7000 },
+            { id: 'player2', name: 'Bob', score: 6500 },
+            { id: 'player3', name: 'Charlie', score: 6200 },
+            { id: 'player4', name: 'Diana', score: 5800 },
+            { id: 'player5', name: 'Eve', score: 5500 }
+        ];
+
+        const mockResults = {
+            'player1': { correct: true, scoreChange: 2000, newScore: 7000 },
+            'player2': { correct: false, scoreChange: -500, newScore: 6500 },
+            'player3': { correct: true, scoreChange: 1200, newScore: 6200 },
+            'player4': { correct: false, scoreChange: -200, newScore: 5800 },
+            'player5': { correct: true, scoreChange: 500, newScore: 5500 }
+        };
+
+        // Render phase indicator
+        uiManager.updatePhaseIndicator('results', 3);
+
+        // Render results screen for correct answer
+        const resultsHTML = uiManager.renderResultsScreen(
+            true, // isCorrect
+            "2007", // correctAnswerText
+            1000, // playerBid
+            2000, // scoreChange
+            7000, // newScore
+            mockPlayers,
+            mockResults
+        );
+
+        document.getElementById('game-content').innerHTML = resultsHTML;
+
+        // Add a button to toggle between correct and wrong answer
+        const toggleButton = document.createElement('button');
+        toggleButton.textContent = 'Toggle Correct/Wrong';
+        toggleButton.style.cssText = 'position: fixed; top: 20px; right: 20px; padding: 10px 20px; z-index: 1000;';
+        toggleButton.onclick = () => {
+            const isCorrect = document.querySelector('.result-correct') !== null;
+            
+            const newResultsHTML = uiManager.renderResultsScreen(
+                !isCorrect, // Toggle correct/wrong
+                "2007",
+                1000,
+                isCorrect ? -1000 : 2000, // Toggle score change
+                isCorrect ? 4000 : 7000, // Toggle new score
+                mockPlayers,
+                mockResults
+            );
+            
+            document.getElementById('game-content').innerHTML = newResultsHTML;
+        };
+        document.body.appendChild(toggleButton);
+
+        console.log('Results screen demo loaded successfully!');
+    </script>
+</body>
+</html>

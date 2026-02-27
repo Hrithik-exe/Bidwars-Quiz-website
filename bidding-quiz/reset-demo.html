@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Game Demo - Multiplayer Bidding Quiz</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <div id="error-container"></div>
+        <div id="main-content">
+            <h1>Reset Game Demo</h1>
+            <p>This demo tests the game reset functionality with confirmation dialog.</p>
+            
+            <div style="margin: 20px 0;">
+                <h2>Test Scenarios:</h2>
+                <button id="test-admin-panel" type="button">Test Admin Panel Reset</button>
+                <button id="test-winner-screen" type="button">Test Winner Screen Reset</button>
+                <button id="test-confirmation" type="button">Test Confirmation Dialog Only</button>
+            </div>
+            
+            <div id="game-content"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+        
+        import { firebaseConfig, db } from './js/firebase-config.js';
+        import { UIManager } from './js/ui.js';
+        import { GameState } from './js/game-state.js';
+        
+        const roomId = 'test-room-reset';
+        const uiManager = new UIManager(roomId);
+        const gameState = new GameState(roomId);
+        
+        // Set up reset callback
+        uiManager.onResetGame = async () => {
+            console.log('Reset game callback triggered');
+            
+            // Get current player ID (simulate admin)
+            const playerId = 'test-admin-' + Date.now();
+            
+            // First, make sure player is admin
+            await set(ref(db, `rooms/${roomId}/players/${playerId}`), {
+                name: 'Test Admin',
+                score: 7500,
+                isAdmin: true,
+                currentBid: 0,
+                currentAnswer: null
+            });
+            
+            // Call reset game
+            const result = await gameState.resetGame(playerId);
+            
+            if (result.success) {
+                uiManager.showSuccess('Game reset successfully!');
+                console.log('Game reset successful');
+                
+                // Verify reset
+                const phaseSnapshot = await get(ref(db, `rooms/${roomId}/phase`));
+                const roundSnapshot = await get(ref(db, `rooms/${roomId}/roundNumber`));
+                const topicsSnapshot = await get(ref(db, `rooms/${roomId}/usedTopics`));
+                
+                console.log('After reset:');
+                console.log('- Phase:', phaseSnapshot.val());
+                console.log('- Round:', roundSnapshot.val());
+                console.log('- Used Topics:', topicsSnapshot.val());
+            } else {
+                uiManager.showError(result.error || 'Failed to reset game');
+                console.error('Game reset failed:', result.error);
+            }
+        };
+        
+        // Test 1: Admin panel reset button
+        document.getElementById('test-admin-panel').addEventListener('click', () => {
+            console.log('Test 1: Admin panel reset');
+            uiManager.showAdminControls('finished', 10);
+        });
+        
+        // Test 2: Winner screen reset button
+        document.getElementById('test-winner-screen').addEventListener('click', async () => {
+            console.log('Test 2: Winner screen reset');
+            
+            // Create test players
+            const testPlayers = [
+                { playerId: 'player1', name: 'Alice', score: 12500 },
+                { playerId: 'player2', name: 'Bob', score: 9800 },
+                { playerId: 'player3', name: 'Charlie', score: 8200 }
+            ];
+            
+            // Add rankings
+            const rankings = testPlayers.map((player, index) => ({
+                ...player,
+                rank: index + 1
+            }));
+            
+            const winner = rankings[0];
+            
+            // Show winner screen as admin
+            uiManager.showWinnerScreen(winner, rankings, true);
+        });
+        
+        // Test 3: Confirmation dialog only
+        document.getElementById('test-confirmation').addEventListener('click', async () => {
+            console.log('Test 3: Confirmation dialog');
+            
+            const confirmed = await uiManager.showConfirmation('Are you sure you want to reset the game? This will reset all scores and start a new game.');
+            
+            if (confirmed) {
+                uiManager.showSuccess('User confirmed reset');
+                console.log('User confirmed');
+            } else {
+                uiManager.showError('User cancelled reset');
+                console.log('User cancelled');
+            }
+        });
+        
+        console.log('Reset demo loaded. Click buttons to test different scenarios.');
+    </script>
+</body>
+</html>
