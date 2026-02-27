@@ -23,7 +23,7 @@ export class UIManager {
   constructor(roomId = "room1") {
     this.roomId = roomId;
     this.playerManager = new PlayerManager(roomId);
-    this.currentPlayerId = null;
+    this.currentPlayerId = localStorage.getItem('currentPlayerId') || null;
     this.mainContent = document.getElementById('main-content');
     this.errorContainer = document.getElementById('error-container');
     
