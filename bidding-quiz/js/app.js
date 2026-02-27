@@ -142,9 +142,10 @@ class BiddingQuizApp {
       const result = await this.playerManager.joinGame(name);
       
       if (result.success) {
-        // Store player ID
+        // Store player ID in memory and localStorage
         this.currentPlayerId = result.playerId;
         this.uiManager.currentPlayerId = result.playerId;
+        localStorage.setItem('currentPlayerId', result.playerId);
         
         // Clear any existing errors
         this.uiManager.clearError();
