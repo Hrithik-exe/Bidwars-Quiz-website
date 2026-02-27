@@ -305,7 +305,10 @@
           roomCreatedSection.style.display = 'block';
           createdRoomCodeEl.textContent = result.roomCode;
           
-          showSuccess(`Room created successfully! Code: ${result.roomCode}`);
+          // Automatically check the admin checkbox for room creator
+          creatorAdminCheckbox.checked = true;
+          
+          showSuccess(`Room created successfully! Code: ${result.roomCode} - You are the admin (spectator mode)`);
           creatorNameInput.focus();
         } else {
           showError(result.error || 'Failed to create room');

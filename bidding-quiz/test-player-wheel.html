@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Player Wheel - Bidding Quiz</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .test-container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #3498db;
+      color: white;
+      transition: background-color 0.3s;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #2980b9;
+    }
+
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #ecf0f1;
+      border-radius: 5px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: #2c3e50;
+    }
+
+    .info {
+      background-color: #e8f4f8;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      border-left: 4px solid #3498db;
+    }
+
+    .info h3 {
+      margin-top: 0;
+      color: #2c3e50;
+    }
+
+    .info ul {
+      margin: 10px 0;
+      padding-left: 20px;
+    }
+
+    .info li {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 Player Wheel Test</h1>
+    
+    <div class="info">
+      <h3>Feature: Wheel with Player Names</h3>
+      <ul>
+        <li>Wheel displays player names as colored segments</li>
+        <li>Each player gets a unique color</li>
+        <li>Spin selects a random player</li>
+        <li>Selected player is highlighted</li>
+      </ul>
+    </div>
+
+    <div class="controls">
+      <button id="render-btn">Render Player Wheel</button>
+      <button id="spin-btn" disabled>Spin Wheel</button>
+      <button id="add-player-btn">Add Random Player</button>
+      <button id="remove-player-btn">Remove Last Player</button>
+    </div>
+
+    <div id="result" class="result" style="display: none;"></div>
+  </div>
+
+  <div id="wheel-container"></div>
+
+  <script type="module">
+    import { SpinningWheel } from './js/wheel.js';
+
+    let wheel = null;
+    let players = [
+      { id: 'p1', name: 'Alice', score: 5000 },
+      { id: 'p2', name: 'Bob', score: 4500 },
+      { id: 'p3', name: 'Charlie', score: 5200 },
+      { id: 'p4', name: 'Diana', score: 4800 },
+      { id: 'p5', name: 'Eve', score: 5100 }
+    ];
+
+    const playerNames = [
+      'Frank', 'Grace', 'Henry', 'Iris', 'Jack',
+      'Kate', 'Leo', 'Maya', 'Noah', 'Olivia',
+      'Peter', 'Quinn', 'Rachel', 'Sam', 'Tina'
+    ];
+
+    const renderBtn = document.getElementById('render-btn');
+    const spinBtn = document.getElementById('spin-btn');
+    const addPlayerBtn = document.getElementById('add-player-btn');
+    const removePlayerBtn = document.getElementById('remove-player-btn');
+    const wheelContainer = document.getElementById('wheel-container');
+    const resultDiv = document.getElementById('result');
+
+    // Render wheel
+    renderBtn.addEventListener('click', () => {
+      wheel = new SpinningWheel('test-room', (result) => {
+        console.log('Wheel completed:', result);
+        resultDiv.textContent = `Selected: ${result.name}`;
+        resultDiv.style.display = 'block';
+      });
+
+      wheel.renderWithPlayerNames(wheelContainer, players);
+      spinBtn.disabled = false;
+      resultDiv.style.display = 'none';
+      console.log('Player wheel rendered with', players.length, 'players');
+    });
+
+    // Spin wheel
+    spinBtn.addEventListener('click', async () => {
+      if (!wheel) return;
+
+      spinBtn.disabled = true;
+      resultDiv.textContent = 'Spinning...';
+      resultDiv.style.display = 'block';
+
+      const selectedPlayer = await wheel.spinForPlayer();
+      
+      if (selectedPlayer) {
+        resultDiv.textContent = `🎉 Selected: ${selectedPlayer.name}`;
+        console.log('Selected player:', selectedPlayer);
+      } else {
+        resultDiv.textContent = 'Error: No player selected';
+      }
+
+      setTimeout(() => {
+        spinBtn.disabled = false;
+      }, 1000);
+    });
+
+    // Add random player
+    addPlayerBtn.addEventListener('click', () => {
+      const randomName = playerNames[Math.floor(Math.random() * playerNames.length)];
+      const newPlayer = {
+        id: `p${players.length + 1}`,
+        name: randomName,
+        score: Math.floor(Math.random() * 2000) + 4000
+      };
+      
+      players.push(newPlayer);
+      console.log('Added player:', newPlayer);
+      
+      // Re-render if wheel exists
+      if (wheel) {
+        wheel.renderWithPlayerNames(wheelContainer, players);
+        resultDiv.style.display = 'none';
+      }
+    });
+
+    // Remove last player
+    removePlayerBtn.addEventListener('click', () => {
+      if (players.length > 1) {
+        const removed = players.pop();
+        console.log('Removed player:', removed);
+        
+        // Re-render if wheel exists
+        if (wheel) {
+          wheel.renderWithPlayerNames(wheelContainer, players);
+          resultDiv.style.display = 'none';
+        }
+      } else {
+        alert('Cannot remove the last player!');
+      }
+    });
+
+    // Initial render
+    renderBtn.click();
+  </script>
+</body>
+</html>

@@ -565,6 +565,447 @@ export class SpinningWheel {
     const container = this.wheelElement.parentElement.parentElement;
     this.render(container);
   }
+
+  /**
+   * Render wheel with player names as segments
+   * @param {HTMLElement} containerElement - Container to render wheel into
+   * @param {Array<{id: string, name: string, score: number}>} players - Array of player objects
+   */
+  renderWithPlayerNames(containerElement, players = []) {
+    return this.measureRenderTime(() => {
+      if (!containerElement) {
+        console.error('Container element is required');
+        return;
+      }
+      
+      if (!players || players.length === 0) {
+        console.warn('No players provided for wheel');
+        containerElement.innerHTML = '<div class="wheel-status">No players available</div>';
+        return;
+      }
+      
+      // Calculate segment angle based on number of players
+      const segmentAngle = 360 / players.length;
+      
+      // Generate colors for each player
+      const colors = this.generatePlayerColors(players.length);
+      
+      // Create wheel container
+      const wheelContainer = document.createElement('div');
+      wheelContainer.className = 'wheel-container';
+      wheelContainer.innerHTML = `
+        <div class="wheel-pointer">▼</div>
+        <div class="wheel wheel-players" id="spinning-wheel" aria-label="Player selection wheel">
+          ${players.map((player, index) => `
+            <div class="wheel-segment wheel-segment-player" 
+                 data-player-id="${player.id}" 
+                 data-player-name="${player.name}"
+                 style="transform: rotate(${index * segmentAngle}deg); 
+                        --segment-angle: ${segmentAngle}deg;
+                        --segment-color: ${colors[index]};">
+              <span class="wheel-segment-text">${player.name}</span>
+            </div>
+          `).join('')}
+          <div class="wheel-topic-overlay" id="wheel-topic-overlay"></div>
+        </div>
+        <div class="wheel-status">${players.length} player${players.length !== 1 ? 's' : ''} in game</div>
+        <div class="wheel-aria-live" role="status" aria-live="polite" aria-atomic="true"></div>
+      `;
+      
+      // Clear container and add wheel
+      containerElement.innerHTML = '';
+      containerElement.appendChild(wheelContainer);
+      
+      // Store reference to wheel element
+      this.wheelElement = document.getElementById('spinning-wheel');
+      
+      // Store reference to ARIA live region
+      this.ariaLiveRegion = wheelContainer.querySelector('.wheel-aria-live');
+      
+      // Store players for spinning
+      this.currentPlayers = players;
+    });
+  }
+
+  /**
+   * Generate distinct colors for player segments
+   * @param {number} count - Number of colors to generate
+   * @returns {Array<string>} Array of color strings
+   * @private
+   */
+  generatePlayerColors(count) {
+    const colors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+      '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788',
+      '#E63946', '#457B9D', '#F77F00', '#06FFA5', '#9D4EDD'
+    ];
+    
+    // If we need more colors than predefined, generate them
+    if (count > colors.length) {
+      for (let i = colors.length; i < count; i++) {
+        const hue = (i * 137.508) % 360; // Golden angle for good distribution
+        colors.push(`hsl(${hue}, 70%, 60%)`);
+      }
+    }
+    
+    return colors.slice(0, count);
+  }
+
+  /**
+   * Spin wheel and select a random player
+   * @returns {Promise<{id: string, name: string}|null>} Selected player or null
+   */
+  async spinForPlayer() {
+    if (this.isSpinning) {
+      console.warn('Wheel is already spinning');
+      return null;
+    }
+    
+    if (!this.currentPlayers || this.currentPlayers.length === 0) {
+      console.error('No players available for selection');
+      return null;
+    }
+    
+    this.isSpinning = true;
+    
+    // Announce to screen readers
+    this.announceToScreenReader('Selecting player');
+    
+    try {
+      // Select random player
+      const randomIndex = Math.floor(Math.random() * this.currentPlayers.length);
+      const selectedPlayer = this.currentPlayers[randomIndex];
+      
+      // Calculate rotation for player wheel
+      const segmentAngle = 360 / this.currentPlayers.length;
+      const targetAngle = randomIndex * segmentAngle + (segmentAngle / 2);
+      
+      // Add 3-5 full spins
+      const fullSpins = 1080 + Math.floor(Math.random() * 721);
+      const totalRotation = fullSpins + targetAngle;
+      
+      // Randomize duration
+      const duration = 3 + Math.random() * 4;
+      
+      // Apply animation
+      if (this.wheelElement) {
+        requestAnimationFrame(() => {
+          this.wheelElement.classList.add('wheel--spinning');
+          this.wheelElement.style.transform = `rotate(${totalRotation}deg)`;
+          this.wheelElement.style.transition = `transform ${duration}s cubic-bezier(0.33, 1, 0.68, 1)`;
+        });
+      }
+      
+      // Wait for animation
+      await new Promise(resolve => setTimeout(resolve, duration * 1000));
+      
+      // Remove spinning class
+      if (this.wheelElement) {
+        this.wheelElement.classList.remove('wheel--spinning');
+      }
+      
+      this.isSpinning = false;
+      
+      // Announce result
+      this.announceToScreenReader(`Selected player: ${selectedPlayer.name}`);
+      
+      // Highlight selected player
+      this.highlightSelectedPlayer(selectedPlayer.id);
+      
+      // Call completion callback
+      if (this.onComplete) {
+        this.onComplete(selectedPlayer);
+      }
+      
+      return selectedPlayer;
+    } catch (error) {
+      console.error('Error spinning wheel for player:', error);
+      this.isSpinning = false;
+      
+      if (this.wheelElement) {
+        this.wheelElement.classList.remove('wheel--spinning');
+      }
+      
+      return null;
+    }
+  }
+
+  /**
+   * Highlight the selected player segment
+   * @param {string} playerId - Selected player ID
+   * @param {number} duration - Highlight duration in milliseconds (default: 2000ms)
+   */
+  highlightSelectedPlayer(playerId, duration = 2000) {
+    if (!this.wheelElement) {
+      console.warn('Wheel element not found');
+      return;
+    }
+
+    // Find the segment for the selected player
+    const segments = this.wheelElement.querySelectorAll('.wheel-segment-player');
+    let selectedSegment = null;
+    let playerName = '';
+
+    segments.forEach(segment => {
+      const segmentPlayerId = segment.getAttribute('data-player-id');
+      if (segmentPlayerId === playerId) {
+        selectedSegment = segment;
+        playerName = segment.getAttribute('data-player-name');
+      }
+    });
+
+    if (!selectedSegment) {
+      console.warn(`Segment for player "${playerId}" not found`);
+      return;
+    }
+
+    // Apply the selected CSS class
+    selectedSegment.classList.add('wheel-segment--selected');
+
+    // Display player name in overlay
+    const overlay = this.wheelElement.querySelector('.wheel-topic-overlay');
+    if (overlay) {
+      overlay.textContent = playerName;
+      overlay.style.display = 'block';
+    }
+
+    // Clear any existing highlight timeout
+    if (this.highlightTimeout) {
+      clearTimeout(this.highlightTimeout);
+    }
+
+    // Set timeout to remove highlight
+    this.highlightTimeout = setTimeout(() => {
+      selectedSegment.classList.remove('wheel-segment--selected');
+
+      if (overlay) {
+        overlay.style.display = 'none';
+        overlay.textContent = '';
+      }
+
+      this.highlightTimeout = null;
+    }, duration);
+  }
+  /**
+   * Render wheel with player names as segments
+   * @param {HTMLElement} containerElement - Container to render wheel into
+   * @param {Array<{id: string, name: string, score: number}>} players - Array of player objects
+   */
+  renderWithPlayerNames(containerElement, players = []) {
+    return this.measureRenderTime(() => {
+      if (!containerElement) {
+        console.error('Container element is required');
+        return;
+      }
+
+      if (!players || players.length === 0) {
+        console.warn('No players provided for wheel');
+        containerElement.innerHTML = '<div class="wheel-status">No players available</div>';
+        return;
+      }
+
+      // Calculate segment angle based on number of players
+      const segmentAngle = 360 / players.length;
+
+      // Generate colors for each player
+      const colors = this.generatePlayerColors(players.length);
+
+      // Create wheel container
+      const wheelContainer = document.createElement('div');
+      wheelContainer.className = 'wheel-container';
+      wheelContainer.innerHTML = `
+        <div class="wheel-pointer">▼</div>
+        <div class="wheel wheel-players" id="spinning-wheel" aria-label="Player selection wheel">
+          ${players.map((player, index) => `
+            <div class="wheel-segment wheel-segment-player"
+                 data-player-id="${player.id}"
+                 data-player-name="${player.name}"
+                 style="transform: rotate(${index * segmentAngle}deg);
+                        --segment-angle: ${segmentAngle}deg;
+                        --segment-color: ${colors[index]};">
+              <span class="wheel-segment-text">${player.name}</span>
+            </div>
+          `).join('')}
+          <div class="wheel-topic-overlay" id="wheel-topic-overlay"></div>
+        </div>
+        <div class="wheel-status">${players.length} player${players.length !== 1 ? 's' : ''} in game</div>
+        <div class="wheel-aria-live" role="status" aria-live="polite" aria-atomic="true"></div>
+      `;
+
+      // Clear container and add wheel
+      containerElement.innerHTML = '';
+      containerElement.appendChild(wheelContainer);
+
+      // Store reference to wheel element
+      this.wheelElement = document.getElementById('spinning-wheel');
+
+      // Store reference to ARIA live region
+      this.ariaLiveRegion = wheelContainer.querySelector('.wheel-aria-live');
+
+      // Store players for spinning
+      this.currentPlayers = players;
+    });
+  }
+
+  /**
+   * Generate distinct colors for player segments
+   * @param {number} count - Number of colors to generate
+   * @returns {Array<string>} Array of color strings
+   * @private
+   */
+  generatePlayerColors(count) {
+    const colors = [
+      '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',
+      '#F7DC6F', '#BB8FCE', '#85C1E2', '#F8B739', '#52B788',
+      '#E63946', '#457B9D', '#F77F00', '#06FFA5', '#9D4EDD'
+    ];
+
+    // If we need more colors than predefined, generate them
+    if (count > colors.length) {
+      for (let i = colors.length; i < count; i++) {
+        const hue = (i * 137.508) % 360; // Golden angle for good distribution
+        colors.push(`hsl(${hue}, 70%, 60%)`);
+      }
+    }
+
+    return colors.slice(0, count);
+  }
+
+  /**
+   * Spin wheel and select a random player
+   * @returns {Promise<{id: string, name: string}|null>} Selected player or null
+   */
+  async spinForPlayer() {
+    if (this.isSpinning) {
+      console.warn('Wheel is already spinning');
+      return null;
+    }
+
+    if (!this.currentPlayers || this.currentPlayers.length === 0) {
+      console.error('No players available for selection');
+      return null;
+    }
+
+    this.isSpinning = true;
+
+    // Announce to screen readers
+    this.announceToScreenReader('Selecting player');
+
+    try {
+      // Select random player
+      const randomIndex = Math.floor(Math.random() * this.currentPlayers.length);
+      const selectedPlayer = this.currentPlayers[randomIndex];
+
+      // Calculate rotation for player wheel
+      const segmentAngle = 360 / this.currentPlayers.length;
+      const targetAngle = randomIndex * segmentAngle + (segmentAngle / 2);
+
+      // Add 3-5 full spins
+      const fullSpins = 1080 + Math.floor(Math.random() * 721);
+      const totalRotation = fullSpins + targetAngle;
+
+      // Randomize duration
+      const duration = 3 + Math.random() * 4;
+
+      // Apply animation
+      if (this.wheelElement) {
+        requestAnimationFrame(() => {
+          this.wheelElement.classList.add('wheel--spinning');
+          this.wheelElement.style.transform = `rotate(${totalRotation}deg)`;
+          this.wheelElement.style.transition = `transform ${duration}s cubic-bezier(0.33, 1, 0.68, 1)`;
+        });
+      }
+
+      // Wait for animation
+      await new Promise(resolve => setTimeout(resolve, duration * 1000));
+
+      // Remove spinning class
+      if (this.wheelElement) {
+        this.wheelElement.classList.remove('wheel--spinning');
+      }
+
+      this.isSpinning = false;
+
+      // Announce result
+      this.announceToScreenReader(`Selected player: ${selectedPlayer.name}`);
+
+      // Highlight selected player
+      this.highlightSelectedPlayer(selectedPlayer.id);
+
+      // Call completion callback
+      if (this.onComplete) {
+        this.onComplete(selectedPlayer);
+      }
+
+      return selectedPlayer;
+    } catch (error) {
+      console.error('Error spinning wheel for player:', error);
+      this.isSpinning = false;
+
+      if (this.wheelElement) {
+        this.wheelElement.classList.remove('wheel--spinning');
+      }
+
+      return null;
+    }
+  }
+
+  /**
+   * Highlight the selected player segment
+   * @param {string} playerId - Selected player ID
+   * @param {number} duration - Highlight duration in milliseconds (default: 2000ms)
+   */
+  highlightSelectedPlayer(playerId, duration = 2000) {
+    if (!this.wheelElement) {
+      console.warn('Wheel element not found');
+      return;
+    }
+
+    // Find the segment for the selected player
+    const segments = this.wheelElement.querySelectorAll('.wheel-segment-player');
+    let selectedSegment = null;
+    let playerName = '';
+
+    segments.forEach(segment => {
+      const segmentPlayerId = segment.getAttribute('data-player-id');
+      if (segmentPlayerId === playerId) {
+        selectedSegment = segment;
+        playerName = segment.getAttribute('data-player-name');
+      }
+    });
+
+    if (!selectedSegment) {
+      console.warn(`Segment for player "${playerId}" not found`);
+      return;
+    }
+
+    // Apply the selected CSS class
+    selectedSegment.classList.add('wheel-segment--selected');
+
+    // Display player name in overlay
+    const overlay = this.wheelElement.querySelector('.wheel-topic-overlay');
+    if (overlay) {
+      overlay.textContent = playerName;
+      overlay.style.display = 'block';
+    }
+
+    // Clear any existing highlight timeout
+    if (this.highlightTimeout) {
+      clearTimeout(this.highlightTimeout);
+    }
+
+    // Set timeout to remove highlight
+    this.highlightTimeout = setTimeout(() => {
+      selectedSegment.classList.remove('wheel-segment--selected');
+
+      if (overlay) {
+        overlay.style.display = 'none';
+        overlay.textContent = '';
+      }
+
+      this.highlightTimeout = null;
+    }, duration);
+  }
   /**
    * Update the topic count display without re-rendering the wheel
    * Shows "X topics remaining" or "No topics available"

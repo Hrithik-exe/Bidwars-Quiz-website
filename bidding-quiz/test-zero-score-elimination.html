@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Zero Score Elimination - Bidding Quiz</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+
+    .test-container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #2c3e50;
+      text-align: center;
+    }
+
+    .info {
+      background-color: #e8f4f8;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      border-left: 4px solid #3498db;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      background-color: #3498db;
+      color: white;
+      transition: background-color 0.3s;
+    }
+
+    button:hover:not(:disabled) {
+      background-color: #2980b9;
+    }
+
+    button:disabled {
+      background-color: #95a5a6;
+      cursor: not-allowed;
+    }
+
+    .players-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 20px;
+    }
+
+    .players-table th,
+    .players-table td {
+      padding: 12px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .players-table th {
+      background-color: #3498db;
+      color: white;
+      font-weight: bold;
+    }
+
+    .players-table tr:hover {
+      background-color: #f5f5f5;
+    }
+
+    .eliminated {
+      background-color: #fee;
+      color: #c33;
+    }
+
+    .spectators-section {
+      margin-top: 30px;
+      padding: 20px;
+      background-color: #fff3cd;
+      border-radius: 5px;
+      border-left: 4px solid #ffc107;
+    }
+
+    .spectators-section h3 {
+      margin-top: 0;
+      color: #856404;
+    }
+
+    .log {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin-top: 20px;
+    }
+
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #3498db;
+      padding-left: 10px;
+    }
+
+    .log-entry.error {
+      border-left-color: #e74c3c;
+      background-color: #fee;
+    }
+
+    .log-entry.success {
+      border-left-color: #27ae60;
+      background-color: #efe;
+    }
+  </style>
+</head>
+<body>
+  <div class="test-container">
+    <h1>🎯 Zero Score Elimination Test</h1>
+    
+    <div class="info">
+      <h3>Feature: Automatic Player Elimination</h3>
+      <p>When a player's score reaches 0 or below, they are automatically converted to spectator mode:</p>
+      <ul>
+        <li>Player is moved from players collection to spectators collection</li>
+        <li>Player data is preserved with elimination timestamp</li>
+        <li>Eliminated players can still watch the game</li>
+        <li>Console shows elimination notifications</li>
+      </ul>
+    </div>
+
+    <div class="controls">
+      <button id="setup-btn">Setup Test Room</button>
+      <button id="simulate-btn" disabled>Simulate Round Results</button>
+      <button id="reset-btn" disabled>Reset Test</button>
+    </div>
+
+    <h2>Active Players</h2>
+    <table class="players-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Score</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="players-tbody">
+        <tr>
+          <td colspan="3" style="text-align: center; color: #999;">No players loaded</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="spectators-section" id="spectators-section" style="display: none;">
+      <h3>👁️ Spectators (Eliminated Players)</h3>
+      <table class="players-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Final Score</th>
+            <th>Eliminated At</th>
+          </tr>
+        </thead>
+        <tbody id="spectators-tbody">
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Event Log</h3>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script type="module">
+    import { GameState } from './js/game-state.js';
+    import { db } from './js/firebase-config.js';
+    import { ref, set, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+    const TEST_ROOM_ID = 'test-elimination-room';
+    let gameState = null;
+
+    const setupBtn = document.getElementById('setup-btn');
+    const simulateBtn = document.getElementById('simulate-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const playersTbody = document.getElementById('players-tbody');
+    const spectatorsTbody = document.getElementById('spectators-tbody');
+    const spectatorsSection = document.getElementById('spectators-section');
+    const logDiv = document.getElementById('log');
+
+    function addLog(message, type = 'info') {
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+      logDiv.insertBefore(entry, logDiv.firstChild);
+    }
+
+    function updatePlayersTable(players) {
+      if (!players || Object.keys(players).length === 0) {
+        playersTbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999;">No active players</td></tr>';
+        return;
+      }
+
+      playersTbody.innerHTML = '';
+      Object.entries(players).forEach(([id, data]) => {
+        const row = document.createElement('tr');
+        const isLowScore = data.score <= 500;
+        if (isLowScore) {
+          row.classList.add('eliminated');
+        }
+        
+        row.innerHTML = `
+          <td>${data.name}</td>
+          <td>${data.score}</td>
+          <td>${isLowScore ? '⚠️ At Risk' : '✅ Active'}</td>
+        `;
+        playersTbody.appendChild(row);
+      });
+    }
+
+    function updateSpectatorsTable(spectators) {
+      if (!spectators || Object.keys(spectators).length === 0) {
+        spectatorsSection.style.display = 'none';
+        return;
+      }
+
+      spectatorsSection.style.display = 'block';
+      spectatorsTbody.innerHTML = '';
+      
+      Object.entries(spectators).forEach(([id, data]) => {
+        const row = document.createElement('tr');
+        const eliminatedTime = data.eliminatedAt ? new Date(data.eliminatedAt).toLocaleTimeString() : 'N/A';
+        
+        row.innerHTML = `
+          <td>${data.name}</td>
+          <td>${data.finalScore || 0}</td>
+          <td>${eliminatedTime}</td>
+        `;
+        spectatorsTbody.appendChild(row);
+      });
+    }
+
+    // Setup test room
+    setupBtn.addEventListener('click', async () => {
+      setupBtn.disabled = true;
+      addLog('Setting up test room...', 'info');
+
+      try {
+        // Create test players with varying scores
+        const testPlayers = {
+          'player1': { name: 'Alice', score: 5000 },
+          'player2': { name: 'Bob', score: 1000 },
+          'player3': { name: 'Charlie', score: 500 },
+          'player4': { name: 'Diana', score: 200 },
+          'player5': { name: 'Eve', score: 100 }
+        };
+
+        // Write to Firebase
+        await set(ref(db, `rooms/${TEST_ROOM_ID}/players`), testPlayers);
+        await set(ref(db, `rooms/${TEST_ROOM_ID}/roundNumber`), 1);
+        await set(ref(db, `rooms/${TEST_ROOM_ID}/phase`), 'results');
+
+        // Initialize GameState
+        gameState = new GameState(TEST_ROOM_ID);
+
+        // Listen to players changes
+        onValue(ref(db, `rooms/${TEST_ROOM_ID}/players`), (snapshot) => {
+          const players = snapshot.exists() ? snapshot.val() : {};
+          updatePlayersTable(players);
+        });
+
+        // Listen to spectators changes
+        onValue(ref(db, `rooms/${TEST_ROOM_ID}/spectators`), (snapshot) => {
+          const spectators = snapshot.exists() ? snapshot.val() : {};
+          updateSpectatorsTable(spectators);
+        });
+
+        addLog('Test room setup complete!', 'success');
+        simulateBtn.disabled = false;
+        resetBtn.disabled = false;
+      } catch (error) {
+        addLog(`Error: ${error.message}`, 'error');
+        setupBtn.disabled = false;
+      }
+    });
+
+    // Simulate round results
+    simulateBtn.addEventListener('click', async () => {
+      simulateBtn.disabled = true;
+      addLog('Simulating round results...', 'info');
+
+      try {
+        // Create mock results that will cause some players to be eliminated
+        const mockResults = {
+          'player1': { correct: true, scoreChange: 1000, newScore: 6000 },
+          'player2': { correct: false, scoreChange: -500, newScore: 500 },
+          'player3': { correct: false, scoreChange: -500, newScore: 0 },
+          'player4': { correct: false, scoreChange: -200, newScore: 0 },
+          'player5': { correct: false, scoreChange: -100, newScore: 0 }
+        };
+
+        addLog('Processing results with elimination check...', 'info');
+
+        // Call the elimination check directly
+        await gameState.checkAndEliminatePlayers(mockResults);
+
+        addLog('Round results processed!', 'success');
+        addLog('Check the tables above for eliminated players', 'info');
+
+        setTimeout(() => {
+          simulateBtn.disabled = false;
+        }, 2000);
+      } catch (error) {
+        addLog(`Error: ${error.message}`, 'error');
+        simulateBtn.disabled = false;
+      }
+    });
+
+    // Reset test
+    resetBtn.addEventListener('click', async () => {
+      resetBtn.disabled = true;
+      addLog('Resetting test...', 'info');
+
+      try {
+        await set(ref(db, `rooms/${TEST_ROOM_ID}`), null);
+        
+        playersTbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #999;">No players loaded</td></tr>';
+        spectatorsTbody.innerHTML = '';
+        spectatorsSection.style.display = 'none';
+        
+        addLog('Test reset complete!', 'success');
+        
+        setupBtn.disabled = false;
+        simulateBtn.disabled = true;
+        resetBtn.disabled = true;
+      } catch (error) {
+        addLog(`Error: ${error.message}`, 'error');
+        resetBtn.disabled = false;
+      }
+    });
+
+    addLog('Ready to test zero score elimination feature', 'info');
+  </script>
+</body>
+</html>

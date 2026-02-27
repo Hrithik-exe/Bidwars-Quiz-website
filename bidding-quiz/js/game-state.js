@@ -703,9 +703,71 @@ export class GameState {
       // Update scores in Firebase
       await this.updateScores(results);
       
+      // Check for eliminated players (score <= 0)
+      await this.checkAndEliminatePlayers(results);
+      
       return results;
     } catch (error) {
       console.error('Error processing round results:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check for players with score <= 0 and convert them to spectators
+   * @param {Object} results - Results object from calculateResults()
+   * @returns {Promise<void>}
+   */
+  async checkAndEliminatePlayers(results) {
+    try {
+      const updates = {};
+      const eliminatedPlayers = [];
+      
+      // Get all players
+      const players = await this.getPlayers();
+      
+      for (const playerId in results) {
+        const result = results[playerId];
+        
+        // Check if player's score is 0 or below
+        if (result.newScore <= 0) {
+          const playerData = players[playerId];
+          
+          if (playerData) {
+            // Add to spectators collection
+            updates[`rooms/${this.roomId}/spectators/${playerId}`] = {
+              name: playerData.name,
+              joinedAt: Date.now(),
+              eliminatedAt: Date.now(),
+              finalScore: result.newScore
+            };
+            
+            // Remove from players collection
+            updates[`rooms/${this.roomId}/players/${playerId}`] = null;
+            
+            eliminatedPlayers.push({
+              id: playerId,
+              name: playerData.name,
+              score: result.newScore
+            });
+          }
+        }
+      }
+      
+      // Apply all updates if there are any eliminations
+      if (eliminatedPlayers.length > 0) {
+        await update(ref(db), updates);
+        
+        // Log eliminations
+        console.log(`Eliminated ${eliminatedPlayers.length} player(s):`, eliminatedPlayers);
+        
+        // Notify about eliminations (can be picked up by UI)
+        for (const player of eliminatedPlayers) {
+          console.log(`Player ${player.name} eliminated with score ${player.score}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking and eliminating players:', error);
       throw error;
     }
   }

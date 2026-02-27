@@ -917,6 +917,41 @@ input:disabled {
     pointer-events: none;
 }
 
+/* Player Wheel Styles */
+.wheel-players {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.wheel-segment-player {
+    background-color: var(--segment-color, #3498db) !important;
+    border-left: 2px solid rgba(255, 255, 255, 0.3);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+
+.wheel-segment-player .wheel-segment-text {
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.wheel-segment-player.wheel-segment--selected {
+    box-shadow: 0 0 30px rgba(255, 255, 255, 0.9);
+    filter: brightness(1.3);
+}
+
+@media (max-width: 767px) {
+    .wheel-segment-player .wheel-segment-text {
+        font-size: 11px;
+    }
+}
+
+@media (min-width: 768px) {
+    .wheel-segment-player .wheel-segment-text {
+        font-size: 16px;
+    }
+}
+
 .wheel-topic-overlay {
     position: absolute;
     top: 50%;
