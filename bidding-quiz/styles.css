@@ -815,14 +815,19 @@ input:disabled {
 }
 
 .wheel-segment-text {
-    font-size: 12px;
-    font-weight: bold;
+    position: absolute;
+    width: 100%;
     text-align: center;
-    transform: rotate(-18deg);
-    max-width: 80px;
-    line-height: 1.2;
+    left: 50%;
+    top: 20%;
+    transform: translateX(-50%) rotate(90deg);
+    transform-origin: center;
+    font-size: 13px;
+    font-weight: 600;
     color: var(--color-black);
+    white-space: nowrap;
 }
+
 
 .wheel-status {
     margin-top: var(--space-lg);

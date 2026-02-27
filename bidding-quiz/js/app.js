@@ -250,7 +250,10 @@ class BiddingQuizApp {
             adminLoginButton.click();
           }
         });
-      }
+          }
+    } else {
+      // User is already admin - show admin controls immediately
+      this._showAdminControls();
     }
 
     // Initialize leaderboard listener
