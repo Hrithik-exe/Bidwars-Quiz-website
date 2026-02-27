@@ -755,3 +755,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Export for testing/debugging
 export { BiddingQuizApp };
+// Deployment fix v1.0.2
