@@ -1,3 +1,5 @@
+// Version: 1.0.3 - Debug player ID issue
+
 /**
  * UI Management Module
  * 
@@ -24,6 +26,8 @@ export class UIManager {
     this.roomId = roomId;
     this.playerManager = new PlayerManager(roomId);
     this.currentPlayerId = localStorage.getItem('currentPlayerId') || null;
+    console.log('[UIManager] Initialized with player ID:', this.currentPlayerId);
+    console.log('[UIManager] localStorage currentPlayerId:', localStorage.getItem('currentPlayerId'));
     this.mainContent = document.getElementById('main-content');
     this.errorContainer = document.getElementById('error-container');
     
@@ -891,6 +895,7 @@ export class UIManager {
 
     try {
       // Submit bid to Firebase
+      console.log('[UIManager] Submitting bid with player ID:', this.currentPlayerId);
       const result = await this.playerManager.submitBid(this.currentPlayerId, bid);
 
       if (result.success) {
