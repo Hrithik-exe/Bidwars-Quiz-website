@@ -13,6 +13,8 @@ import { db } from './firebase-config.js';
 import { ref, set, update, get } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
 import { RoomCodeGenerator } from './room-code-generator.js';
 import { InactivityTracker } from './inactivity-tracker.js';
+import { DisconnectDetector } from './disconnect-detector.js';
+import { DisconnectNotifier } from './disconnect-notifier.js';
 
 /**
  * Error codes for room operations
@@ -38,6 +40,19 @@ export class RoomManager {
     this.codeGenerator = new RoomCodeGenerator();
     this.inactivityTracker = new InactivityTracker(this);
     this.maxRetries = 3;
+    this.disconnectDetector = null; // Will be initialized with PlayerManager
+    this.notifier = new DisconnectNotifier();
+  }
+
+  /**
+   * Initialize disconnect detector with PlayerManager
+   * Should be called after PlayerManager is created
+   * @param {PlayerManager} playerManager - Player manager instance
+   */
+  initializeDisconnectDetector(playerManager) {
+    this.disconnectDetector = new DisconnectDetector(db, playerManager, this);
+    this.disconnectDetector.setNotifier(this.notifier);
+    console.log('DisconnectDetector initialized');
   }
 
   /**
@@ -74,6 +89,11 @@ export class RoomManager {
       await update(ref(db), updates);
       
       console.log(`Room created: ${roomCode} (${roomId})`);
+      
+      // Start disconnect monitoring if detector is initialized
+      if (this.disconnectDetector) {
+        this.disconnectDetector.startMonitoring(roomId);
+      }
       
       return {
         success: true,
@@ -324,6 +344,11 @@ export class RoomManager {
   async terminateRoom(roomId, reason) {
     try {
       console.log(`Terminating room ${roomId}: ${reason}`);
+
+      // Stop disconnect monitoring
+      if (this.disconnectDetector) {
+        this.disconnectDetector.stopMonitoring(roomId);
+      }
 
       // Get room data to check if it exists
       const roomRef = ref(db, `rooms/${roomId}`);

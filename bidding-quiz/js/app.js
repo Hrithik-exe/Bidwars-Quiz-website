@@ -66,6 +66,9 @@ class BiddingQuizApp {
     this.gameState.roomManager = this.roomManager;
     this.playerManager.roomManager = this.roomManager;
     
+    // Initialize disconnect detector with PlayerManager
+    this.roomManager.initializeDisconnectDetector(this.playerManager);
+    
     // Store current player info
     this.currentPlayerId = localStorage.getItem('currentPlayerId') || null;
     this.isAdmin = localStorage.getItem('isAdmin') === 'true' || false;
@@ -718,12 +721,35 @@ class BiddingQuizApp {
       console.log('App started - Join screen rendered');
     }
   }
+
+  /**
+   * Cleanup method to stop monitoring and release resources
+   * Should be called when app is destroyed or page is unloaded
+   */
+  cleanup() {
+    console.log('Cleaning up BiddingQuizApp...');
+    
+    // Stop disconnect monitoring
+    if (this.roomManager && this.roomManager.disconnectDetector && this.roomId) {
+      this.roomManager.disconnectDetector.stopMonitoring(this.roomId);
+    }
+    
+    // Stop inactivity tracking
+    if (this.roomManager) {
+      this.roomManager.stopInactivityTracking();
+    }
+  }
 }
 
 // Initialize and start the app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   const app = new BiddingQuizApp();
   app.start();
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    app.cleanup();
+  });
 });
 
 // Export for testing/debugging

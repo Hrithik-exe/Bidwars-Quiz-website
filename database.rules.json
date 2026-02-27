@@ -1,0 +1,38 @@
+{
+  "rules": {
+    "rooms": {
+      "$roomId": {
+        ".read": true,
+        ".write": true
+      }
+    },
+    "roomCodes": {
+      ".read": true,
+      ".write": true
+    },
+    "presence": {
+      "$roomId": {
+        "$playerId": {
+          ".read": true,
+          ".write": "auth != null && (auth.uid == $playerId || root.child('rooms').child($roomId).child('players').child(auth.uid).child('isAdmin').val() == true)",
+          ".validate": "newData.hasChildren(['online', 'lastSeen', 'connectedAt', 'playerId', 'playerName'])",
+          "online": {
+            ".validate": "newData.isBoolean()"
+          },
+          "lastSeen": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "connectedAt": {
+            ".validate": "newData.isNumber() && newData.val() > 0"
+          },
+          "playerId": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          },
+          "playerName": {
+            ".validate": "newData.isString() && newData.val().length > 0"
+          }
+        }
+      }
+    }
+  }
+}

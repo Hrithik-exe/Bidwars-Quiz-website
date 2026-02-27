@@ -11,6 +11,7 @@
 
 import { db } from './firebase-config.js';
 import { ref, set, update, get, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+import { PresenceTracker } from './presence-tracker.js';
 
 /**
  * Hardcoded admin password
@@ -71,6 +72,7 @@ export class PlayerManager {
     this.roomId = roomId;
     this.players = new Map();
     this.roomManager = null; // Set by app initialization
+    this.presenceTracker = new PresenceTracker(); // Initialize presence tracker
   }
 
   /**
@@ -179,6 +181,13 @@ export class PlayerManager {
       // Create Player instance
       const player = new Player(playerId, playerData.name, playerData.score);
       this.players.set(playerId, player);
+
+      // Register player presence
+      const presenceResult = await this.presenceTracker.registerPlayer(playerId, this.roomId);
+      if (!presenceResult.success) {
+        console.error('Failed to register presence:', presenceResult.error);
+        // Continue anyway - presence is not critical for joining
+      }
 
       // Update activity timestamp
       if (this.roomManager) {
@@ -450,3 +459,58 @@ export class PlayerManager {
     }
   }
 }
+
+  /**
+   * Remove a player from the game
+   * Removes player from Firebase and local state, and cleans up presence
+   * @param {string} playerId - Player ID to remove
+   * @param {string} roomId - Room identifier (optional, uses this.roomId if not provided)
+   * @returns {Promise<{success: boolean, error?: string}>}
+   */
+  async removePlayer(playerId, roomId = null) {
+    try {
+      const targetRoomId = roomId || this.roomId;
+
+      // Validate inputs
+      if (!playerId || typeof playerId !== 'string' || playerId.trim().length === 0) {
+        return {
+          success: false,
+          error: 'Invalid playerId'
+        };
+      }
+
+      if (!targetRoomId || typeof targetRoomId !== 'string' || targetRoomId.trim().length === 0) {
+        return {
+          success: false,
+          error: 'Invalid roomId'
+        };
+      }
+
+      // Remove player from Firebase
+      const playerRef = ref(db, `rooms/${targetRoomId}/players/${playerId}`);
+      await set(playerRef, null);
+
+      // Remove player from local players Map
+      this.players.delete(playerId);
+
+      // Unregister presence
+      await this.presenceTracker.unregisterPlayer(playerId, targetRoomId);
+
+      // Update activity timestamp
+      if (this.roomManager) {
+        await this.roomManager.updateActivity(targetRoomId);
+      }
+
+      console.log(`Player ${playerId} removed from room ${targetRoomId}`);
+
+      return {
+        success: true
+      };
+    } catch (error) {
+      console.error('Error removing player:', error);
+      return {
+        success: false,
+        error: 'Failed to remove player'
+      };
+    }
+  }
