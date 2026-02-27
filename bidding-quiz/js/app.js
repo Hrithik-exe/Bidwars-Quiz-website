@@ -142,15 +142,9 @@ class BiddingQuizApp {
       const result = await this.playerManager.joinGame(name);
       
       if (result.success) {
-        // Store player ID in memory and localStorage
+        // Store player ID
         this.currentPlayerId = result.playerId;
         this.uiManager.currentPlayerId = result.playerId;
-        localStorage.setItem('currentPlayerId', result.playerId);
-        
-        // Set up presence tracking for this player
-        if (this.roomManager && this.roomManager.disconnectDetector) {
-          await this.roomManager.disconnectDetector.startMonitoring(this.roomId);
-        }
         
         // Clear any existing errors
         this.uiManager.clearError();
