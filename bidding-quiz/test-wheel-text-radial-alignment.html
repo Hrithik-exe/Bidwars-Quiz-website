@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug Condition Exploration: Wheel Text Radial Alignment</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .wheel-container {
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            position: relative;
+        }
+        #test-results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bug Condition Exploration Test: Wheel Text Radial Alignment</h1>
+    <p><strong>Property 1: Fault Condition - Wheel Text Horizontal Rotation</strong></p>
+    <p><strong>Validates: Requirements 2.1</strong></p>
+    <p>This test demonstrates that wheel segment text appears horizontal (rotate(90deg)) instead of radially aligned on UNFIXED code.</p>
+    <p><strong>EXPECTED OUTCOME: Test FAILS on unfixed code (this proves the bug exists)</strong></p>
+
+    <div class="test-section">
+        <h2>Test Wheel Rendering</h2>
+        <div class="wheel-container">
+            <div id="test-wheel" class="wheel"></div>
+        </div>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script src="js/wheel.js"></script>
+    <script>
+        // Property-Based Test: Wheel Text Radial Alignment
+        // Tests that text should be radially aligned (rotate(0deg) or no rotation) for readability
+        
+        const testResults = [];
+        
+        function logTest(name, passed, message, counterexample = null) {
+            testResults.push({ name, passed, message, counterexample });
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${passed ? '✓ PASS' : '✗ FAIL'}</strong>: ${name}<br>
+                ${message}
+                ${counterexample ? `<br><strong>Counterexample:</strong> ${counterexample}` : ''}
+            `;
+            document.getElementById('test-results').appendChild(resultDiv);
+        }
+
+        // Test 1: Check if wheel segment text has rotate(90deg) transform (BUG CONDITION)
+        function testTextRotationBugCondition() {
+            const wheelElement = document.getElementById('test-wheel');
+            
+            // Create a simple wheel with segments
+            const segmentCount = 8;
+            const topics = Array.from({ length: segmentCount }, (_, i) => `Topic ${i + 1}`);
+            
+            // Render wheel segments manually to test
+            wheelElement.innerHTML = '';
+            topics.forEach((topic, index) => {
+                const segment = document.createElement('div');
+                segment.className = 'wheel-segment';
+                segment.style.transform = `rotate(${index * (360 / segmentCount)}deg)`;
+                
+                const text = document.createElement('div');
+                text.className = 'wheel-segment-text';
+                text.textContent = topic;
+                
+                segment.appendChild(text);
+                wheelElement.appendChild(segment);
+            });
+            
+            // Check the computed style of the first text element
+            const firstText = wheelElement.querySelector('.wheel-segment-text');
+            if (!firstText) {
+                logTest('Text Rotation Bug Condition', false, 'Could not find wheel segment text element');
+                return;
+            }
+            
+            const computedStyle = window.getComputedStyle(firstText);
+            const transform = computedStyle.transform;
+            
+            // Parse the transform to check for rotation
+            // The bug is that text has rotate(90deg) making it horizontal
+            // Expected behavior: text should be radially aligned (rotate(0deg) or no rotation)
+            
+            const hasRotate90 = firstText.style.transform && firstText.style.transform.includes('rotate(90deg)');
+            const cssTransform = getComputedTransform(firstText);
+            
+            if (hasRotate90 || cssTransform.includes('rotate(90deg)')) {
+                logTest(
+                    'Text Rotation Bug Condition',
+                    false,
+                    'BUG DETECTED: Text has rotate(90deg) making it horizontal instead of radially aligned',
+                    `Transform includes rotate(90deg): ${cssTransform}`
+                );
+            } else {
+                logTest(
+                    'Text Rotation Bug Condition',
+                    true,
+                    'Text is radially aligned (no 90deg rotation)',
+                    `Transform: ${cssTransform}`
+                );
+            }
+        }
+
+        // Test 2: Property-based test with multiple segment counts
+        function testTextAlignmentProperty() {
+            const segmentCounts = [5, 8, 10, 12, 15];
+            let allPassed = true;
+            const counterexamples = [];
+            
+            segmentCounts.forEach(count => {
+                const wheelElement = document.getElementById('test-wheel');
+                wheelElement.innerHTML = '';
+                
+                const topics = Array.from({ length: count }, (_, i) => `Topic ${i + 1}`);
+                
+                topics.forEach((topic, index) => {
+                    const segment = document.createElement('div');
+                    segment.className = 'wheel-segment';
+                    segment.style.transform = `rotate(${index * (360 / count)}deg)`;
+                    
+                    const text = document.createElement('div');
+                    text.className = 'wheel-segment-text';
+                    text.textContent = topic;
+                    
+                    segment.appendChild(text);
+                    wheelElement.appendChild(segment);
+                });
+                
+                // Check all text elements
+                const textElements = wheelElement.querySelectorAll('.wheel-segment-text');
+                textElements.forEach((textEl, idx) => {
+                    const cssTransform = getComputedTransform(textEl);
+                    
+                    // Expected: text should NOT have rotate(90deg)
+                    // Bug: text HAS rotate(90deg) making it horizontal
+                    if (cssTransform.includes('rotate(90deg)')) {
+                        allPassed = false;
+                        counterexamples.push(`Segment ${idx} with ${count} total segments has rotate(90deg)`);
+                    }
+                });
+            });
+            
+            if (!allPassed) {
+                logTest(
+                    'Property: Text Radial Alignment for All Segment Counts',
+                    false,
+                    'BUG DETECTED: Text should be radially aligned but has rotate(90deg)',
+                    counterexamples.join('; ')
+                );
+            } else {
+                logTest(
+                    'Property: Text Radial Alignment for All Segment Counts',
+                    true,
+                    'All text elements are radially aligned across different segment counts'
+                );
+            }
+        }
+
+        // Helper function to get the actual CSS transform from stylesheet
+        function getComputedTransform(element) {
+            // Get the transform from the CSS rule
+            const styleSheets = document.styleSheets;
+            for (let sheet of styleSheets) {
+                try {
+                    const rules = sheet.cssRules || sheet.rules;
+                    for (let rule of rules) {
+                        if (rule.selectorText === '.wheel-segment-text') {
+                            return rule.style.transform || 'none';
+                        }
+                    }
+                } catch (e) {
+                    // Cross-origin stylesheet, skip
+                }
+            }
+            return window.getComputedStyle(element).transform;
+        }
+
+        // Run tests
+        window.addEventListener('load', () => {
+            console.log('Running Bug Condition Exploration Tests for Text Readability...');
+            testTextRotationBugCondition();
+            testTextAlignmentProperty();
+            
+            // Summary
+            const failedTests = testResults.filter(t => !t.passed);
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-section';
+            summaryDiv.innerHTML = `
+                <h2>Test Summary</h2>
+                <p><strong>Total Tests:</strong> ${testResults.length}</p>
+                <p><strong>Passed:</strong> ${testResults.length - failedTests.length}</p>
+                <p><strong>Failed:</strong> ${failedTests.length}</p>
+                <p><strong>Expected Outcome:</strong> Tests should FAIL on unfixed code (proving bug exists)</p>
+                ${failedTests.length > 0 ? '<p style="color: #721c24;"><strong>✓ Bug confirmed - tests failed as expected</strong></p>' : '<p style="color: #155724;"><strong>Bug appears to be fixed - tests passed</strong></p>'}
+            `;
+            document.getElementById('test-results').appendChild(summaryDiv);
+        });
+    </script>
+</body>
+</html>

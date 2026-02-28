@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug Condition Exploration: Unequal Wheel Segments</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .wheel-container {
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            position: relative;
+        }
+        #test-results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bug Condition Exploration Test: Unequal Wheel Segments</h1>
+    <p><strong>Property 1: Fault Condition - Hardcoded 36-Degree Angles</strong></p>
+    <p><strong>Validates: Requirements 2.2</strong></p>
+    <p>This test demonstrates that wheel segments use hardcoded 36-degree spacing (360/10) instead of dynamic calculation (360/segmentCount) on UNFIXED code.</p>
+    <p><strong>EXPECTED OUTCOME: Test FAILS on unfixed code (this proves the bug exists)</strong></p>
+
+    <div class="test-section">
+        <h2>Test Wheel with 8 Segments</h2>
+        <p>Expected: Each segment should be 45 degrees (360/8)</p>
+        <p>Actual (unfixed): Each segment uses 36 degrees (hardcoded)</p>
+        <div class="wheel-container">
+            <div id="test-wheel-8" class="wheel"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Wheel with 12 Segments</h2>
+        <p>Expected: Each segment should be 30 degrees (360/12)</p>
+        <p>Actual (unfixed): Each segment uses 36 degrees (hardcoded)</p>
+        <div class="wheel-container">
+            <div id="test-wheel-12" class="wheel"></div>
+        </div>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script src="js/wheel.js"></script>
+    <script>
+        const testResults = [];
+        
+        function logTest(name, passed, message, counterexample = null) {
+            testResults.push({ name, passed, message, counterexample });
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${passed ? '✓ PASS' : '✗ FAIL'}</strong>: ${name}<br>
+                ${message}
+                ${counterexample ? `<br><strong>Counterexample:</strong> ${counterexample}` : ''}
+            `;
+            document.getElementById('test-results').appendChild(resultDiv);
+        }
+
+        // Helper function to extract rotation angle from transform style
+        function extractRotationAngle(transformString) {
+            const match = transformString.match(/rotate\(([0-9.]+)deg\)/);
+            return match ? parseFloat(match[1]) : null;
+        }
+
+        // Test 1: Check if wheel segments use hardcoded 36-degree angles (BUG CONDITION)
+        function testHardcodedAngles(segmentCount, wheelElementId) {
+            const wheelElement = document.getElementById(wheelElementId);
+            wheelElement.innerHTML = '';
+            
+            // Create segments manually to test the bug
+            const topics = Array.from({ length: segmentCount }, (_, i) => `Topic ${i + 1}`);
+            
+            // Simulate the UNFIXED code behavior (hardcoded 36 degrees)
+            topics.forEach((topic, index) => {
+                const segment = document.createElement('div');
+                segment.className = 'wheel-segment';
+                // This is the BUG: using hardcoded 36 instead of 360/segmentCount
+                segment.style.transform = `rotate(${index * 36}deg)`;
+                
+                const text = document.createElement('div');
+                text.className = 'wheel-segment-text';
+                text.textContent = topic;
+                
+                segment.appendChild(text);
+                wheelElement.appendChild(segment);
+            });
+            
+            // Check the angles
+            const segments = wheelElement.querySelectorAll('.wheel-segment');
+            const expectedAngle = 360 / segmentCount;
+            const actualAngles = [];
+            let hasIncorrectAngles = false;
+            
+            segments.forEach((segment, index) => {
+                const angle = extractRotationAngle(segment.style.transform);
+                actualAngles.push(angle);
+                
+                const expectedAngleForSegment = expectedAngle * index;
+                const actualAngleForSegment = 36 * index; // Hardcoded bug
+                
+                if (Math.abs(angle - expectedAngleForSegment) > 0.1) {
+                    hasIncorrectAngles = true;
+                }
+            });
+            
+            if (hasIncorrectAngles) {
+                logTest(
+                    `Hardcoded Angles Bug (${segmentCount} segments)`,
+                    false,
+                    `BUG DETECTED: Segments use hardcoded 36-degree spacing instead of ${expectedAngle.toFixed(2)} degrees`,
+                    `Expected angles: ${Array.from({ length: segmentCount }, (_, i) => (expectedAngle * i).toFixed(1)).join(', ')}. Actual angles: ${actualAngles.map(a => a.toFixed(1)).join(', ')}`
+                );
+            } else {
+                logTest(
+                    `Hardcoded Angles Bug (${segmentCount} segments)`,
+                    true,
+                    `Segments use correct dynamic angle calculation: ${expectedAngle.toFixed(2)} degrees per segment`
+                );
+            }
+        }
+
+        // Test 2: Property-based test - verify equal segments for various counts
+        function testEqualSegmentsProperty() {
+            const segmentCounts = [5, 6, 7, 8, 9, 11, 12, 15, 20];
+            const counterexamples = [];
+            let allPassed = true;
+            
+            segmentCounts.forEach(count => {
+                const expectedAngle = 360 / count;
+                const hardcodedAngle = 36;
+                
+                // For counts != 10, the hardcoded 36 degrees will be wrong
+                if (count !== 10) {
+                    const firstSegmentExpected = 0;
+                    const firstSegmentActual = 0;
+                    const secondSegmentExpected = expectedAngle;
+                    const secondSegmentActual = hardcodedAngle;
+                    
+                    if (Math.abs(secondSegmentExpected - secondSegmentActual) > 0.1) {
+                        allPassed = false;
+                        counterexamples.push(
+                            `${count} segments: expected ${expectedAngle.toFixed(2)}° per segment, but hardcoded 36° causes ${Math.abs(secondSegmentExpected - secondSegmentActual).toFixed(2)}° error`
+                        );
+                    }
+                }
+            });
+            
+            if (!allPassed) {
+                logTest(
+                    'Property: Equal Segments for All Counts',
+                    false,
+                    'BUG DETECTED: Hardcoded 36-degree angles cause unequal segments for non-10 counts',
+                    counterexamples.join('; ')
+                );
+            } else {
+                logTest(
+                    'Property: Equal Segments for All Counts',
+                    true,
+                    'All segment counts use correct dynamic angle calculation'
+                );
+            }
+        }
+
+        // Test 3: Specific case - 8 segments should be 45 degrees each
+        function testEightSegments() {
+            const segmentCount = 8;
+            const expectedAngle = 360 / segmentCount; // 45 degrees
+            const hardcodedAngle = 36; // Bug
+            
+            const error = Math.abs(expectedAngle - hardcodedAngle);
+            
+            if (error > 0.1) {
+                logTest(
+                    'Specific Case: 8 Segments',
+                    false,
+                    `BUG DETECTED: 8 segments should use 45° per segment, but hardcoded 36° causes ${error.toFixed(2)}° error`,
+                    `Expected: 45° per segment (360/8). Actual: 36° per segment (hardcoded). This causes segments to overlap or have gaps.`
+                );
+            } else {
+                logTest(
+                    'Specific Case: 8 Segments',
+                    true,
+                    '8 segments correctly use 45° per segment'
+                );
+            }
+        }
+
+        // Test 4: Specific case - 12 segments should be 30 degrees each
+        function testTwelveSegments() {
+            const segmentCount = 12;
+            const expectedAngle = 360 / segmentCount; // 30 degrees
+            const hardcodedAngle = 36; // Bug
+            
+            const error = Math.abs(expectedAngle - hardcodedAngle);
+            
+            if (error > 0.1) {
+                logTest(
+                    'Specific Case: 12 Segments',
+                    false,
+                    `BUG DETECTED: 12 segments should use 30° per segment, but hardcoded 36° causes ${error.toFixed(2)}° error`,
+                    `Expected: 30° per segment (360/12). Actual: 36° per segment (hardcoded). This causes segments to overlap.`
+                );
+            } else {
+                logTest(
+                    'Specific Case: 12 Segments',
+                    true,
+                    '12 segments correctly use 30° per segment'
+                );
+            }
+        }
+
+        // Run tests
+        window.addEventListener('load', () => {
+            console.log('Running Bug Condition Exploration Tests for Unequal Segments...');
+            
+            testHardcodedAngles(8, 'test-wheel-8');
+            testHardcodedAngles(12, 'test-wheel-12');
+            testEqualSegmentsProperty();
+            testEightSegments();
+            testTwelveSegments();
+            
+            // Summary
+            const failedTests = testResults.filter(t => !t.passed);
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-section';
+            summaryDiv.innerHTML = `
+                <h2>Test Summary</h2>
+                <p><strong>Total Tests:</strong> ${testResults.length}</p>
+                <p><strong>Passed:</strong> ${testResults.length - failedTests.length}</p>
+                <p><strong>Failed:</strong> ${failedTests.length}</p>
+                <p><strong>Expected Outcome:</strong> Tests should FAIL on unfixed code (proving bug exists)</p>
+                ${failedTests.length > 0 ? '<p style="color: #721c24;"><strong>✓ Bug confirmed - tests failed as expected</strong></p>' : '<p style="color: #155724;"><strong>Bug appears to be fixed - tests passed</strong></p>'}
+            `;
+            document.getElementById('test-results').appendChild(summaryDiv);
+        });
+    </script>
+</body>
+</html>

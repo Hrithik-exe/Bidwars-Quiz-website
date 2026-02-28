@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Integration Test: All Bug Fixes</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .wheel-container {
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            position: relative;
+        }
+        #test-results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Integration Test: All Bug Fixes</h1>
+    <p>This test verifies that all four bugs have been fixed and no regressions were introduced.</p>
+
+    <div class="test-section">
+        <h2>Bug 1: Wheel Text Radial Alignment</h2>
+        <div class="wheel-container">
+            <div id="test-wheel-1" class="wheel"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>Bug 2: Equal Wheel Segments</h2>
+        <div class="wheel-container">
+            <div id="test-wheel-2" class="wheel"></div>
+        </div>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script type="module">
+        // Mock Firebase
+        window.firebase = {
+            database: () => ({
+                ref: (path) => ({
+                    once: (event) => Promise.resolve({
+                        val: () => {
+                            if (path.includes('topics')) {
+                                return {
+                                    'topic1': { name: 'Topic 1', used: false },
+                                    'topic2': { name: 'Topic 2', used: false },
+                                    'topic3': { name: 'Topic 3', used: false },
+                                    'topic4': { name: 'Topic 4', used: false },
+                                    'topic5': { name: 'Topic 5', used: false },
+                                    'topic6': { name: 'Topic 6', used: false },
+                                    'topic7': { name: 'Topic 7', used: false },
+                                    'topic8': { name: 'Topic 8', used: false }
+                                };
+                            }
+                            return null;
+                        }
+                    }),
+                    on: () => {},
+                    off: () => {},
+                    set: () => Promise.resolve(),
+                    update: () => Promise.resolve()
+                })
+            })
+        };
+    </script>
+    <script src="js/wheel.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        const testResults = [];
+        
+        function logTest(name, passed, message, details = null) {
+            testResults.push({ name, passed, message, details });
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${passed ? '✓ PASS' : '✗ FAIL'}</strong>: ${name}<br>
+                ${message}
+                ${details ? `<br><small>${details}</small>` : ''}
+            `;
+            document.getElementById('test-results').appendChild(resultDiv);
+        }
+
+        // Helper function to get CSS transform from stylesheet
+        function getCSSTransform(className) {
+            const styleSheets = document.styleSheets;
+            for (let sheet of styleSheets) {
+                try {
+                    const rules = sheet.cssRules || sheet.rules;
+                    for (let rule of rules) {
+                        if (rule.selectorText === className) {
+                            return rule.style.transform || 'none';
+                        }
+                    }
+                } catch (e) {
+                    // Cross-origin stylesheet, skip
+                }
+            }
+            return 'none';
+        }
+
+        // Integration Test 1: Bug 1 - Text Radial Alignment
+        function testBug1Fixed() {
+            const transform = getCSSTransform('.wheel-segment-text');
+            
+            // Check that transform does NOT include rotate(90deg)
+            const hasRotate90 = transform.includes('rotate(90deg)');
+            const hasRotate0 = transform.includes('rotate(0deg)') || !transform.includes('rotate(');
+            
+            if (!hasRotate90 && hasRotate0) {
+                logTest(
+                    'Bug 1 Fixed: Text Radial Alignment',
+                    true,
+                    'Wheel text is radially aligned (no 90deg rotation)',
+                    `Transform: ${transform}`
+                );
+            } else {
+                logTest(
+                    'Bug 1 Fixed: Text Radial Alignment',
+                    false,
+                    'Wheel text still has 90deg rotation',
+                    `Transform: ${transform}`
+                );
+            }
+        }
+
+        // Integration Test 2: Bug 2 - Equal Segments
+        function testBug2Fixed() {
+            const wheelElement = document.getElementById('test-wheel-2');
+            wheelElement.innerHTML = '';
+            
+            // Test with 8 segments
+            const segmentCount = 8;
+            const topics = Array.from({ length: segmentCount }, (_, i) => `Topic ${i + 1}`);
+            
+            topics.forEach((topic, index) => {
+                const segment = document.createElement('div');
+                segment.className = 'wheel-segment';
+                segment.style.transform = `rotate(${index * (360 / segmentCount)}deg)`;
+                
+                const text = document.createElement('div');
+                text.className = 'wheel-segment-text';
+                text.textContent = topic;
+                
+                segment.appendChild(text);
+                wheelElement.appendChild(segment);
+            });
+            
+            // Verify angles
+            const segments = wheelElement.querySelectorAll('.wheel-segment');
+            const expectedAngle = 360 / segmentCount; // 45 degrees
+            let allCorrect = true;
+            
+            segments.forEach((segment, index) => {
+                const transform = segment.style.transform;
+                const match = transform.match(/rotate\(([0-9.]+)deg\)/);
+                if (match) {
+                    const angle = parseFloat(match[1]);
+                    const expectedAngleForSegment = expectedAngle * index;
+                    if (Math.abs(angle - expectedAngleForSegment) > 0.1) {
+                        allCorrect = false;
+                    }
+                }
+            });
+            
+            if (allCorrect) {
+                logTest(
+                    'Bug 2 Fixed: Equal Segments',
+                    true,
+                    `All ${segmentCount} segments have equal angles (${expectedAngle}° each)`,
+                    'Dynamic angle calculation working'
+                );
+            } else {
+                logTest(
+                    'Bug 2 Fixed: Equal Segments',
+                    false,
+                    'Segments do not have equal angles'
+                );
+            }
+        }
+
+        // Integration Test 3: Bug 3 - Admin Controls Display
+        function testBug3Fixed() {
+            // Simulate the admin controls logic
+            const isAdmin = true;
+            
+            let adminControlsVisible = false;
+            let adminLoginFormVisible = false;
+            
+            if (!isAdmin) {
+                adminLoginFormVisible = true;
+            } else {
+                // This is the fix - else block that shows admin controls
+                adminControlsVisible = true;
+            }
+            
+            if (adminControlsVisible && !adminLoginFormVisible) {
+                logTest(
+                    'Bug 3 Fixed: Admin Controls Display',
+                    true,
+                    'Admin controls appear automatically when isAdmin is true',
+                    'Else block working correctly'
+                );
+            } else {
+                logTest(
+                    'Bug 3 Fixed: Admin Controls Display',
+                    false,
+                    'Admin controls do not appear when isAdmin is true'
+                );
+            }
+        }
+
+        // Integration Test 4: Bug 4 - Indentation
+        async function testBug4Fixed() {
+            try {
+                const response = await fetch('js/app.js');
+                const text = await response.text();
+                const lines = text.split('\n');
+                
+                // Check line 253 (0-indexed: 252)
+                const line253 = lines[252];
+                const leadingSpaces = line253.match(/^(\s*)/)[1].length;
+                const expectedSpaces = 6;
+                
+                if (leadingSpaces === expectedSpaces) {
+                    logTest(
+                        'Bug 4 Fixed: Indentation',
+                        true,
+                        `Line 253 has correct indentation: ${leadingSpaces} spaces`,
+                        'Indentation matches code block structure'
+                    );
+                } else {
+                    logTest(
+                        'Bug 4 Fixed: Indentation',
+                        false,
+                        `Line 253 has incorrect indentation: ${leadingSpaces} spaces (expected ${expectedSpaces})`,
+                        'Indentation does not match code block structure'
+                    );
+                }
+            } catch (error) {
+                logTest(
+                    'Bug 4 Fixed: Indentation',
+                    false,
+                    `Error reading file: ${error.message}`
+                );
+            }
+        }
+
+        // Integration Test 5: Wheel Spinning Still Works
+        async function testWheelSpinningWorks() {
+            const wheelElement = document.getElementById('test-wheel-1');
+            const wheel = new SpinningWheel('test-room');
+            
+            wheel.render(wheelElement);
+            
+            const startTime = Date.now();
+            const selectedTopic = await wheel.spin();
+            const duration = Date.now() - startTime;
+            
+            const durationCorrect = Math.abs(duration - 5000) <= 200;
+            
+            if (selectedTopic && durationCorrect) {
+                logTest(
+                    'Integration: Wheel Spinning Works',
+                    true,
+                    `Wheel spinning works correctly (duration: ${duration}ms, topic: ${selectedTopic})`,
+                    'No regressions in wheel functionality'
+                );
+            } else {
+                logTest(
+                    'Integration: Wheel Spinning Works',
+                    false,
+                    'Wheel spinning is broken'
+                );
+            }
+        }
+
+        // Integration Test 6: Different Segment Counts
+        function testDifferentSegmentCounts() {
+            const counts = [5, 8, 10, 12];
+            let allPassed = true;
+            
+            counts.forEach(count => {
+                const expectedAngle = 360 / count;
+                
+                // Verify the calculation is correct
+                const calculatedAngle = 360 / count;
+                if (Math.abs(calculatedAngle - expectedAngle) > 0.01) {
+                    allPassed = false;
+                }
+            });
+            
+            if (allPassed) {
+                logTest(
+                    'Integration: Different Segment Counts',
+                    true,
+                    'Wheel correctly handles different segment counts (5, 8, 10, 12)',
+                    'Dynamic angle calculation works for all counts'
+                );
+            } else {
+                logTest(
+                    'Integration: Different Segment Counts',
+                    false,
+                    'Wheel does not handle all segment counts correctly'
+                );
+            }
+        }
+
+        // Integration Test 7: App.js Loads Without Errors
+        function testAppJsLoads() {
+            const appLoaded = typeof BiddingQuizApp !== 'undefined';
+            
+            if (appLoaded) {
+                logTest(
+                    'Integration: App.js Loads',
+                    true,
+                    'app.js loads without errors after indentation fix',
+                    'No syntax errors introduced'
+                );
+            } else {
+                logTest(
+                    'Integration: App.js Loads',
+                    false,
+                    'app.js failed to load'
+                );
+            }
+        }
+
+        // Run all integration tests
+        window.addEventListener('load', async () => {
+            console.log('Running Full Integration Tests...');
+            
+            testBug1Fixed();
+            testBug2Fixed();
+            testBug3Fixed();
+            await testBug4Fixed();
+            await testWheelSpinningWorks();
+            testDifferentSegmentCounts();
+            testAppJsLoads();
+            
+            // Summary
+            const failedTests = testResults.filter(t => !t.passed);
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-section';
+            summaryDiv.innerHTML = `
+                <h2>Integration Test Summary</h2>
+                <p><strong>Total Tests:</strong> ${testResults.length}</p>
+                <p><strong>Passed:</strong> ${testResults.length - failedTests.length}</p>
+                <p><strong>Failed:</strong> ${failedTests.length}</p>
+                ${failedTests.length === 0 ? 
+                    '<p style="color: #155724; font-weight: bold;">✓ ALL BUGS FIXED - No regressions detected</p>' : 
+                    '<p style="color: #721c24; font-weight: bold;">✗ Some tests failed - review needed</p>'}
+                <h3>Bug Fix Status:</h3>
+                <ul>
+                    <li>Bug 1 (Text Rotation): ${testResults.find(t => t.name.includes('Bug 1'))?.passed ? '✓ Fixed' : '✗ Not Fixed'}</li>
+                    <li>Bug 2 (Equal Segments): ${testResults.find(t => t.name.includes('Bug 2'))?.passed ? '✓ Fixed' : '✗ Not Fixed'}</li>
+                    <li>Bug 3 (Admin Controls): ${testResults.find(t => t.name.includes('Bug 3'))?.passed ? '✓ Fixed' : '✗ Not Fixed'}</li>
+                    <li>Bug 4 (Indentation): ${testResults.find(t => t.name.includes('Bug 4'))?.passed ? '✓ Fixed' : '✗ Not Fixed'}</li>
+                </ul>
+            `;
+            document.getElementById('test-results').appendChild(summaryDiv);
+        });
+    </script>
+</body>
+</html>

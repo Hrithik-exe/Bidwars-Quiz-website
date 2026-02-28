@@ -820,7 +820,7 @@ input:disabled {
     text-align: center;
     left: 50%;
     top: 20%;
-    transform: translateX(-50%) rotate(90deg);
+    transform: translateX(-50%) rotate(0deg);
     transform-origin: center;
     font-size: 13px;
     font-weight: 600;

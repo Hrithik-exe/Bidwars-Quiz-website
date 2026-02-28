@@ -149,7 +149,7 @@ export class SpinningWheel {
         <div class="wheel-pointer">▼</div>
         <div class="wheel" id="spinning-wheel" aria-label="Topic selection wheel">
           ${TOPICS.map((topic, index) => `
-            <div class="wheel-segment" style="transform: rotate(${index * 36}deg)">
+            <div class="wheel-segment" style="transform: rotate(${index * (360 / TOPICS.length)}deg)">
               <span class="wheel-segment-text">${topic}</span>
             </div>
           `).join('')}
@@ -198,7 +198,7 @@ export class SpinningWheel {
             const isUsed = usedTopics.includes(topic);
             const segmentClass = isUsed ? 'wheel-segment wheel-segment--used' : 'wheel-segment wheel-segment--available';
             return `
-              <div class="${segmentClass}" data-topic="${topic}" style="transform: rotate(${index * 36}deg)">
+              <div class="${segmentClass}" data-topic="${topic}" style="transform: rotate(${index * (360 / TOPICS.length)}deg)">
                 <span class="wheel-segment-text">${topic}</span>
               </div>
             `;

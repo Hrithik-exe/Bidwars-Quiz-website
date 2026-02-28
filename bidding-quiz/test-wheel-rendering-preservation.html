@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preservation Test: Wheel Rendering and Animation</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .wheel-container {
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            position: relative;
+        }
+        #test-results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Preservation Property Test: Wheel Rendering and Animation</h1>
+    <p><strong>Property 2: Preservation - Wheel Rendering and Animation</strong></p>
+    <p><strong>Validates: Requirements 3.1</strong></p>
+    <p>This test verifies that wheel rendering, spinning animation, and visual appearance remain unchanged after the segment angle fix.</p>
+    <p><strong>EXPECTED OUTCOME: Tests PASS on unfixed code (confirms baseline behavior to preserve)</strong></p>
+
+    <div class="test-section">
+        <h2>Test Wheel</h2>
+        <div class="wheel-container">
+            <div id="test-wheel" class="wheel"></div>
+        </div>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script type="module">
+        // Mock Firebase for testing
+        window.firebase = {
+            database: () => ({
+                ref: (path) => ({
+                    once: (event) => Promise.resolve({
+                        val: () => {
+                            if (path.includes('topics')) {
+                                return {
+                                    'topic1': { name: 'Topic 1', used: false },
+                                    'topic2': { name: 'Topic 2', used: false },
+                                    'topic3': { name: 'Topic 3', used: false },
+                                    'topic4': { name: 'Topic 4', used: false },
+                                    'topic5': { name: 'Topic 5', used: false },
+                                    'topic6': { name: 'Topic 6', used: false },
+                                    'topic7': { name: 'Topic 7', used: false },
+                                    'topic8': { name: 'Topic 8', used: false },
+                                    'topic9': { name: 'Topic 9', used: false },
+                                    'topic10': { name: 'Topic 10', used: false }
+                                };
+                            }
+                            return null;
+                        }
+                    }),
+                    set: () => Promise.resolve(),
+                    update: () => Promise.resolve()
+                })
+            })
+        };
+    </script>
+    <script src="js/wheel.js"></script>
+    <script>
+        const testResults = [];
+        
+        function logTest(name, passed, message, details = null) {
+            testResults.push({ name, passed, message, details });
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${passed ? '✓ PASS' : '✗ FAIL'}</strong>: ${name}<br>
+                ${message}
+                ${details ? `<br><small>${details}</small>` : ''}
+            `;
+            document.getElementById('test-results').appendChild(resultDiv);
+        }
+
+        // Property 1: Wheel renders with all segments visible
+        function testWheelRendersAllSegments() {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            
+            wheel.render(wheelElement);
+            
+            const segments = wheelElement.querySelectorAll('.wheel-segment');
+            const hasSegments = segments.length > 0;
+            
+            if (hasSegments) {
+                logTest(
+                    'Wheel Renders All Segments',
+                    true,
+                    `Wheel correctly renders ${segments.length} segments`,
+                    'Segment rendering preserved'
+                );
+            } else {
+                logTest(
+                    'Wheel Renders All Segments',
+                    false,
+                    'Wheel does not render segments correctly'
+                );
+            }
+        }
+
+        // Property 2: Each segment has text label
+        function testSegmentsHaveTextLabels() {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            
+            wheel.render(wheelElement);
+            
+            const segments = wheelElement.querySelectorAll('.wheel-segment');
+            const textElements = wheelElement.querySelectorAll('.wheel-segment-text');
+            
+            const allSegmentsHaveText = segments.length === textElements.length && textElements.length > 0;
+            
+            if (allSegmentsHaveText) {
+                logTest(
+                    'Segments Have Text Labels',
+                    true,
+                    `All ${segments.length} segments have text labels`,
+                    'Text label rendering preserved'
+                );
+            } else {
+                logTest(
+                    'Segments Have Text Labels',
+                    false,
+                    `Segment count (${segments.length}) does not match text count (${textElements.length})`
+                );
+            }
+        }
+
+        // Property 3: Wheel has proper CSS classes
+        function testWheelHasProperClasses() {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            
+            wheel.render(wheelElement);
+            
+            const hasWheelContainer = wheelElement.closest('.wheel-container') !== null;
+            const hasWheelPointer = wheelElement.parentElement.querySelector('.wheel-pointer') !== null;
+            const hasWheelStatus = wheelElement.parentElement.querySelector('.wheel-status') !== null;
+            
+            if (hasWheelContainer && hasWheelPointer && hasWheelStatus) {
+                logTest(
+                    'Wheel Has Proper Structure',
+                    true,
+                    'Wheel has all required structural elements (container, pointer, status)',
+                    'Wheel structure preserved'
+                );
+            } else {
+                logTest(
+                    'Wheel Has Proper Structure',
+                    false,
+                    'Wheel is missing some structural elements'
+                );
+            }
+        }
+
+        // Property 4: Segments have transform property
+        function testSegmentsHaveTransform() {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            
+            wheel.render(wheelElement);
+            
+            const segments = wheelElement.querySelectorAll('.wheel-segment');
+            let allHaveTransform = true;
+            
+            segments.forEach(segment => {
+                const transform = segment.style.transform;
+                if (!transform || !transform.includes('rotate')) {
+                    allHaveTransform = false;
+                }
+            });
+            
+            if (allHaveTransform && segments.length > 0) {
+                logTest(
+                    'Segments Have Transform Property',
+                    true,
+                    'All segments have rotation transform applied',
+                    'Transform-based positioning preserved'
+                );
+            } else {
+                logTest(
+                    'Segments Have Transform Property',
+                    false,
+                    'Some segments are missing rotation transform'
+                );
+            }
+        }
+
+        // Property 5: Wheel animation uses CSS transition
+        async function testWheelAnimationTransition() {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            
+            wheel.render(wheelElement);
+            
+            // Start spin
+            const spinPromise = wheel.spin();
+            
+            // Check that wheel element has transition applied during spin
+            await new Promise(resolve => setTimeout(resolve, 100)); // Wait a bit for animation to start
+            
+            const wheelInner = document.getElementById('spinning-wheel');
+            const computedStyle = window.getComputedStyle(wheelInner);
+            const hasTransition = computedStyle.transition && computedStyle.transition !== 'none';
+            
+            if (hasTransition) {
+                logTest(
+                    'Wheel Animation Uses CSS Transition',
+                    true,
+                    'Wheel correctly uses CSS transition for animation',
+                    'Animation mechanism preserved'
+                );
+            } else {
+                logTest(
+                    'Wheel Animation Uses CSS Transition',
+                    false,
+                    'Wheel does not use CSS transition for animation'
+                );
+            }
+            
+            // Wait for spin to complete
+            await spinPromise;
+        }
+
+        // Property 6: Wheel renders with different topic counts
+        function testWheelRendersWithDifferentCounts() {
+            const wheelElement = document.getElementById('test-wheel');
+            const counts = [5, 8, 10, 12];
+            let allPassed = true;
+            
+            counts.forEach(count => {
+                wheelElement.innerHTML = '';
+                const wheel = new SpinningWheel('test-room');
+                
+                const mockTopics = Array.from({ length: count }, (_, i) => `Topic ${i + 1}`);
+                wheel.updateTopics(mockTopics);
+                wheel.render(wheelElement);
+                
+                const segments = wheelElement.querySelectorAll('.wheel-segment');
+                if (segments.length !== count) {
+                    allPassed = false;
+                }
+            });
+            
+            if (allPassed) {
+                logTest(
+                    'Wheel Renders With Different Topic Counts',
+                    true,
+                    'Wheel correctly renders with 5, 8, 10, and 12 topics',
+                    'Variable topic count rendering preserved'
+                );
+            } else {
+                logTest(
+                    'Wheel Renders With Different Topic Counts',
+                    false,
+                    'Wheel does not correctly render all topic counts'
+                );
+            }
+        }
+
+        // Property 7: Wheel visual appearance (colors, styling)
+        function testWheelVisualAppearance() {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            
+            wheel.render(wheelElement);
+            
+            const segments = wheelElement.querySelectorAll('.wheel-segment');
+            let allHaveProperStyling = true;
+            
+            segments.forEach(segment => {
+                const hasClass = segment.classList.contains('wheel-segment');
+                const textElement = segment.querySelector('.wheel-segment-text');
+                const hasTextClass = textElement && textElement.classList.contains('wheel-segment-text');
+                
+                if (!hasClass || !hasTextClass) {
+                    allHaveProperStyling = false;
+                }
+            });
+            
+            if (allHaveProperStyling && segments.length > 0) {
+                logTest(
+                    'Wheel Visual Appearance',
+                    true,
+                    'All segments have proper CSS classes for styling',
+                    'Visual styling preserved'
+                );
+            } else {
+                logTest(
+                    'Wheel Visual Appearance',
+                    false,
+                    'Some segments are missing proper CSS classes'
+                );
+            }
+        }
+
+        // Run tests
+        window.addEventListener('load', async () => {
+            console.log('Running Preservation Property Tests...');
+            
+            testWheelRendersAllSegments();
+            testSegmentsHaveTextLabels();
+            testWheelHasProperClasses();
+            testSegmentsHaveTransform();
+            testWheelRendersWithDifferentCounts();
+            testWheelVisualAppearance();
+            
+            // Run async animation test
+            await testWheelAnimationTransition();
+            
+            // Summary
+            const failedTests = testResults.filter(t => !t.passed);
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-section';
+            summaryDiv.innerHTML = `
+                <h2>Test Summary</h2>
+                <p><strong>Total Tests:</strong> ${testResults.length}</p>
+                <p><strong>Passed:</strong> ${testResults.length - failedTests.length}</p>
+                <p><strong>Failed:</strong> ${failedTests.length}</p>
+                <p><strong>Expected Outcome:</strong> Tests should PASS on unfixed code (baseline behavior)</p>
+                ${failedTests.length === 0 ? '<p style="color: #155724;"><strong>✓ All preservation tests passed - baseline behavior confirmed</strong></p>' : '<p style="color: #721c24;"><strong>✗ Some preservation tests failed - baseline behavior may be compromised</strong></p>'}
+            `;
+            document.getElementById('test-results').appendChild(summaryDiv);
+        });
+    </script>
+</body>
+</html>

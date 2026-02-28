@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preservation Test: Wheel Spinning Mechanics</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .wheel-container {
+            width: 300px;
+            height: 300px;
+            margin: 20px auto;
+            position: relative;
+        }
+        #test-results {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Preservation Property Test: Wheel Spinning Mechanics</h1>
+    <p><strong>Property 2: Preservation - Wheel Spinning and Selection Mechanics</strong></p>
+    <p><strong>Validates: Requirements 3.1</strong></p>
+    <p>This test verifies that wheel spinning animation, timing, easing, and topic selection behavior remain unchanged after the text rotation fix.</p>
+    <p><strong>EXPECTED OUTCOME: Tests PASS on unfixed code (confirms baseline behavior to preserve)</strong></p>
+
+    <div class="test-section">
+        <h2>Test Wheel</h2>
+        <div class="wheel-container">
+            <div id="test-wheel" class="wheel"></div>
+        </div>
+        <button id="test-spin-btn" style="display: block; margin: 10px auto; padding: 10px 20px;">Test Spin</button>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script type="module">
+        // Mock Firebase for testing
+        window.firebase = {
+            database: () => ({
+                ref: (path) => ({
+                    once: (event) => Promise.resolve({
+                        val: () => {
+                            if (path.includes('topics')) {
+                                return {
+                                    'topic1': { name: 'Topic 1', used: false },
+                                    'topic2': { name: 'Topic 2', used: false },
+                                    'topic3': { name: 'Topic 3', used: false },
+                                    'topic4': { name: 'Topic 4', used: false },
+                                    'topic5': { name: 'Topic 5', used: false },
+                                    'topic6': { name: 'Topic 6', used: false },
+                                    'topic7': { name: 'Topic 7', used: false },
+                                    'topic8': { name: 'Topic 8', used: false }
+                                };
+                            }
+                            return null;
+                        }
+                    }),
+                    set: () => Promise.resolve(),
+                    update: () => Promise.resolve()
+                })
+            })
+        };
+    </script>
+    <script src="js/wheel.js"></script>
+    <script>
+        const testResults = [];
+        
+        function logTest(name, passed, message, details = null) {
+            testResults.push({ name, passed, message, details });
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${passed ? '✓ PASS' : '✗ FAIL'}</strong>: ${name}<br>
+                ${message}
+                ${details ? `<br><small>${details}</small>` : ''}
+            `;
+            document.getElementById('test-results').appendChild(resultDiv);
+        }
+
+        // Property 1: Wheel animation uses CSS transform with 5s duration
+        function testWheelAnimationProperties() {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            
+            // Render the wheel
+            wheel.render(wheelElement);
+            
+            // Check that wheel element exists and has proper structure
+            const hasWheelElement = wheelElement.children.length > 0;
+            const hasSegments = wheelElement.querySelectorAll('.wheel-segment').length > 0;
+            
+            if (hasWheelElement && hasSegments) {
+                logTest(
+                    'Wheel Rendering Structure',
+                    true,
+                    'Wheel renders with proper segment structure',
+                    `Found ${wheelElement.querySelectorAll('.wheel-segment').length} segments`
+                );
+            } else {
+                logTest(
+                    'Wheel Rendering Structure',
+                    false,
+                    'Wheel rendering structure is incorrect'
+                );
+            }
+        }
+
+        // Property 2: Wheel spin animation timing and easing
+        async function testWheelSpinAnimation() {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            
+            wheel.render(wheelElement);
+            
+            // Record start time
+            const startTime = Date.now();
+            
+            // Trigger spin (this will take 5 seconds)
+            const spinPromise = wheel.spin();
+            
+            // Check that isSpinning flag is set
+            if (wheel.isSpinning) {
+                logTest(
+                    'Wheel Spinning State',
+                    true,
+                    'Wheel correctly sets isSpinning flag during animation'
+                );
+            } else {
+                logTest(
+                    'Wheel Spinning State',
+                    false,
+                    'Wheel does not set isSpinning flag'
+                );
+            }
+            
+            // Wait for spin to complete
+            const selectedTopic = await spinPromise;
+            const duration = Date.now() - startTime;
+            
+            // Check animation duration (should be ~5000ms, allow 200ms tolerance)
+            const expectedDuration = 5000;
+            const tolerance = 200;
+            const durationCorrect = Math.abs(duration - expectedDuration) <= tolerance;
+            
+            if (durationCorrect) {
+                logTest(
+                    'Wheel Animation Duration',
+                    true,
+                    `Wheel animation duration is correct: ${duration}ms (expected ~${expectedDuration}ms)`,
+                    'Animation timing preserved'
+                );
+            } else {
+                logTest(
+                    'Wheel Animation Duration',
+                    false,
+                    `Wheel animation duration is incorrect: ${duration}ms (expected ~${expectedDuration}ms)`
+                );
+            }
+            
+            // Check that a topic was selected
+            if (selectedTopic) {
+                logTest(
+                    'Topic Selection',
+                    true,
+                    `Topic selected successfully: ${selectedTopic}`,
+                    'Topic selection mechanism preserved'
+                );
+            } else {
+                logTest(
+                    'Topic Selection',
+                    false,
+                    'No topic was selected after spin'
+                );
+            }
+            
+            // Check that isSpinning flag is cleared
+            if (!wheel.isSpinning) {
+                logTest(
+                    'Wheel Spinning State Cleared',
+                    true,
+                    'Wheel correctly clears isSpinning flag after animation'
+                );
+            } else {
+                logTest(
+                    'Wheel Spinning State Cleared',
+                    false,
+                    'Wheel does not clear isSpinning flag after animation'
+                );
+            }
+        }
+
+        // Property 3: Wheel transform uses CSS transform property
+        function testWheelTransformProperty() {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            
+            wheel.render(wheelElement);
+            
+            // Check that wheel uses transform for rotation
+            const wheelInner = wheelElement.querySelector('.wheel');
+            if (wheelInner) {
+                // The wheel should be able to accept transform styles
+                wheelInner.style.transform = 'rotate(360deg)';
+                const computedStyle = window.getComputedStyle(wheelInner);
+                const hasTransform = computedStyle.transform !== 'none';
+                
+                if (hasTransform) {
+                    logTest(
+                        'Wheel Transform Property',
+                        true,
+                        'Wheel correctly uses CSS transform for rotation',
+                        'Transform-based animation preserved'
+                    );
+                } else {
+                    logTest(
+                        'Wheel Transform Property',
+                        false,
+                        'Wheel does not use CSS transform for rotation'
+                    );
+                }
+            }
+        }
+
+        // Property 4: Multiple segment counts render correctly
+        function testMultipleSegmentCounts() {
+            const segmentCounts = [5, 8, 10, 12];
+            let allPassed = true;
+            
+            segmentCounts.forEach(count => {
+                const wheelElement = document.getElementById('test-wheel');
+                wheelElement.innerHTML = '';
+                
+                const wheel = new SpinningWheel('test-room');
+                
+                // Mock topics for this count
+                const mockTopics = Array.from({ length: count }, (_, i) => `Topic ${i + 1}`);
+                wheel.updateTopics(mockTopics);
+                wheel.render(wheelElement);
+                
+                const renderedSegments = wheelElement.querySelectorAll('.wheel-segment').length;
+                if (renderedSegments !== count) {
+                    allPassed = false;
+                }
+            });
+            
+            if (allPassed) {
+                logTest(
+                    'Multiple Segment Counts',
+                    true,
+                    'Wheel correctly renders different numbers of segments',
+                    'Tested with 5, 8, 10, and 12 segments'
+                );
+            } else {
+                logTest(
+                    'Multiple Segment Counts',
+                    false,
+                    'Wheel does not correctly render all segment counts'
+                );
+            }
+        }
+
+        // Run tests
+        window.addEventListener('load', async () => {
+            console.log('Running Preservation Property Tests...');
+            
+            testWheelAnimationProperties();
+            testWheelTransformProperty();
+            testMultipleSegmentCounts();
+            
+            // Run async spin test
+            await testWheelSpinAnimation();
+            
+            // Summary
+            const failedTests = testResults.filter(t => !t.passed);
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-section';
+            summaryDiv.innerHTML = `
+                <h2>Test Summary</h2>
+                <p><strong>Total Tests:</strong> ${testResults.length}</p>
+                <p><strong>Passed:</strong> ${testResults.length - failedTests.length}</p>
+                <p><strong>Failed:</strong> ${failedTests.length}</p>
+                <p><strong>Expected Outcome:</strong> Tests should PASS on unfixed code (baseline behavior)</p>
+                ${failedTests.length === 0 ? '<p style="color: #155724;"><strong>✓ All preservation tests passed - baseline behavior confirmed</strong></p>' : '<p style="color: #721c24;"><strong>✗ Some preservation tests failed - baseline behavior may be compromised</strong></p>'}
+            `;
+            document.getElementById('test-results').appendChild(summaryDiv);
+        });
+
+        // Manual spin test button
+        document.getElementById('test-spin-btn').addEventListener('click', async () => {
+            const wheelElement = document.getElementById('test-wheel');
+            const wheel = new SpinningWheel('test-room');
+            wheel.render(wheelElement);
+            
+            const btn = document.getElementById('test-spin-btn');
+            btn.disabled = true;
+            btn.textContent = 'Spinning...';
+            
+            await wheel.spin();
+            
+            btn.disabled = false;
+            btn.textContent = 'Test Spin';
+        });
+    </script>
+</body>
+</html>

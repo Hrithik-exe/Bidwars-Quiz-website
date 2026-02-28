@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bug Condition Exploration: Indentation Check</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 3px;
+        }
+        .test-pass {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .test-fail {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        #test-results {
+            margin-top: 20px;
+        }
+        .code-display {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            white-space: pre;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Bug Condition Exploration Test: Indentation Check</h1>
+    <p><strong>Property 1: Fault Condition - Incorrect Indentation Spacing</strong></p>
+    <p><strong>Validates: Requirements 2.4</strong></p>
+    <p>This test demonstrates that line 253 in app.js has 10 spaces of indentation instead of the correct 6 spaces.</p>
+    <p><strong>EXPECTED OUTCOME: Test FAILS on unfixed code (this proves the bug exists)</strong></p>
+
+    <div class="test-section">
+        <h2>Test Scenario</h2>
+        <p>The closing brace on line 253 should have 6 spaces to match the code block structure, but has 10 spaces.</p>
+        <div class="code-display" id="code-display"></div>
+    </div>
+
+    <div id="test-results"></div>
+
+    <script>
+        const testResults = [];
+        
+        function logTest(name, passed, message, counterexample = null) {
+            testResults.push({ name, passed, message, counterexample });
+            const resultDiv = document.createElement('div');
+            resultDiv.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+            resultDiv.innerHTML = `
+                <strong>${passed ? '✓ PASS' : '✗ FAIL'}</strong>: ${name}<br>
+                ${message}
+                ${counterexample ? `<br><strong>Counterexample:</strong> ${counterexample}` : ''}
+            `;
+            document.getElementById('test-results').appendChild(resultDiv);
+        }
+
+        // Test 1: Check indentation on line 253 (BUG CONDITION)
+        async function testIndentationBugCondition() {
+            try {
+                // Fetch the app.js file
+                const response = await fetch('js/app.js');
+                const text = await response.text();
+                const lines = text.split('\n');
+                
+                // Line 253 (0-indexed: 252)
+                const lineNumber = 253;
+                const line = lines[lineNumber - 1];
+                
+                // Count leading spaces
+                const leadingSpaces = line.match(/^(\s*)/)[1].length;
+                const expectedSpaces = 6;
+                
+                // Display the code context
+                const codeDisplay = document.getElementById('code-display');
+                const contextStart = Math.max(0, lineNumber - 5);
+                const contextEnd = Math.min(lines.length, lineNumber + 3);
+                let codeContext = '';
+                for (let i = contextStart; i < contextEnd; i++) {
+                    const lineNum = i + 1;
+                    const prefix = lineNum === lineNumber ? '>>> ' : '    ';
+                    codeContext += `${prefix}${lineNum}: ${lines[i]}\n`;
+                }
+                codeDisplay.textContent = codeContext;
+                
+                if (leadingSpaces !== expectedSpaces) {
+                    logTest(
+                        'Indentation Bug Condition (Line 253)',
+                        false,
+                        `BUG DETECTED: Line 253 has ${leadingSpaces} spaces instead of ${expectedSpaces} spaces`,
+                        `Line content: "${line}". Expected ${expectedSpaces} spaces to match the if block structure, but found ${leadingSpaces} spaces.`
+                    );
+                } else {
+                    logTest(
+                        'Indentation Bug Condition (Line 253)',
+                        true,
+                        `Line 253 has correct indentation: ${leadingSpaces} spaces`
+                    );
+                }
+            } catch (error) {
+                logTest(
+                    'Indentation Bug Condition (Line 253)',
+                    false,
+                    `Error reading file: ${error.message}`
+                );
+            }
+        }
+
+        // Test 2: Property-based test - check indentation consistency
+        async function testIndentationConsistency() {
+            try {
+                const response = await fetch('js/app.js');
+                const text = await response.text();
+                const lines = text.split('\n');
+                
+                // Check the if block structure around line 242-253
+                const ifBlockStart = 242; // if (adminLoginButton && adminPasswordInput) {
+                const ifBlockEnd = 253; // closing brace
+                
+                const startLine = lines[ifBlockStart - 1];
+                const endLine = lines[ifBlockEnd - 1];
+                
+                const startIndent = startLine.match(/^(\s*)/)[1].length;
+                const endIndent = endLine.match(/^(\s*)/)[1].length;
+                
+                if (startIndent === endIndent) {
+                    logTest(
+                        'Property: Indentation Consistency',
+                        true,
+                        `Opening and closing braces have matching indentation: ${startIndent} spaces`,
+                        'Indentation is consistent'
+                    );
+                } else {
+                    logTest(
+                        'Property: Indentation Consistency',
+                        false,
+                        `BUG DETECTED: Opening brace has ${startIndent} spaces, closing brace has ${endIndent} spaces`,
+                        `Inconsistent indentation causes formatting issues. Expected both to have ${startIndent} spaces.`
+                    );
+                }
+            } catch (error) {
+                logTest(
+                    'Property: Indentation Consistency',
+                    false,
+                    `Error reading file: ${error.message}`
+                );
+            }
+        }
+
+        // Test 3: Check if indentation affects code execution
+        function testCodeExecutionPreservation() {
+            // Indentation in JavaScript doesn't affect execution (unlike Python)
+            // But it affects code readability and maintainability
+            
+            const indentationAffectsExecution = false; // JavaScript is not indentation-sensitive
+            
+            if (!indentationAffectsExecution) {
+                logTest(
+                    'Code Execution Preservation',
+                    true,
+                    'Indentation fix will not affect code execution (JavaScript is not indentation-sensitive)',
+                    'Only formatting is affected, not functionality'
+                );
+            } else {
+                logTest(
+                    'Code Execution Preservation',
+                    false,
+                    'Indentation affects code execution'
+                );
+            }
+        }
+
+        // Test 4: Specific case - line 253 should match line 242
+        async function testSpecificLineIndentation() {
+            try {
+                const response = await fetch('js/app.js');
+                const text = await response.text();
+                const lines = text.split('\n');
+                
+                const line242 = lines[241]; // if (adminLoginButton && adminPasswordInput) {
+                const line253 = lines[252]; // closing brace
+                
+                const indent242 = line242.match(/^(\s*)/)[1].length;
+                const indent253 = line253.match(/^(\s*)/)[1].length;
+                
+                const expectedIndent253 = indent242; // Should match the opening if
+                
+                if (indent253 === expectedIndent253) {
+                    logTest(
+                        'Specific Case: Line 253 Matches Line 242',
+                        true,
+                        `Line 253 correctly matches line 242 indentation: ${indent253} spaces`
+                    );
+                } else {
+                    logTest(
+                        'Specific Case: Line 253 Matches Line 242',
+                        false,
+                        `BUG DETECTED: Line 253 has ${indent253} spaces, but should match line 242 with ${expectedIndent253} spaces`,
+                        `The closing brace should align with the opening if statement. Current: ${indent253} spaces, Expected: ${expectedIndent253} spaces.`
+                    );
+                }
+            } catch (error) {
+                logTest(
+                    'Specific Case: Line 253 Matches Line 242',
+                    false,
+                    `Error reading file: ${error.message}`
+                );
+            }
+        }
+
+        // Run tests
+        window.addEventListener('load', async () => {
+            console.log('Running Bug Condition Exploration Tests for Indentation...');
+            
+            await testIndentationBugCondition();
+            await testIndentationConsistency();
+            testCodeExecutionPreservation();
+            await testSpecificLineIndentation();
+            
+            // Summary
+            const failedTests = testResults.filter(t => !t.passed);
+            const summaryDiv = document.createElement('div');
+            summaryDiv.className = 'test-section';
+            summaryDiv.innerHTML = `
+                <h2>Test Summary</h2>
+                <p><strong>Total Tests:</strong> ${testResults.length}</p>
+                <p><strong>Passed:</strong> ${testResults.length - failedTests.length}</p>
+                <p><strong>Failed:</strong> ${failedTests.length}</p>
+                <p><strong>Expected Outcome:</strong> Tests should FAIL on unfixed code (proving bug exists)</p>
+                ${failedTests.length > 0 ? '<p style="color: #721c24;"><strong>✓ Bug confirmed - tests failed as expected</strong></p>' : '<p style="color: #155724;"><strong>Bug appears to be fixed - tests passed</strong></p>'}
+            `;
+            document.getElementById('test-results').appendChild(summaryDiv);
+        });
+    </script>
+</body>
+</html>
